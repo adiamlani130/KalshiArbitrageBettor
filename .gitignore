@@ -1,2 +1,5 @@
 __pycache__/
 .DS_Store
+data/sports_cache/
+data/stocks_cache/
+data/paper_state.json

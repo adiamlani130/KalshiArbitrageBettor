@@ -10,7 +10,10 @@ This project tests well-known sports "trends" against real Kalshi prediction-mar
 
 **Short answer:** no simple rule reliably beats the market after fees. The one pattern that shows up everywhere is the **favorite-longshot bias**: long shots (big comebacks, big underdogs) are overpriced, while heavy favorites are priced about right.
 
-**Try it yourself:** the [Kalshi Edge Lab](https://adiamlani130.github.io/KalshiArbitrageBettor/) runs in the browser with nothing to install. Build any strategy: pick a sport, a sample (for example 1,000 random tennis matches), when to bet, who to bet on, a price range and any conditions, and see what it would have made. It can also look for links, like whether set-1 length changes how often the set-1 winner goes on to win.
+**Try it yourself:** the [Kalshi Edge Lab](https://adiamlani130.github.io/KalshiArbitrageBettor/) runs in the browser with nothing to install. It has two pages:
+
+- **Sports lab.** Build any strategy: pick a sport, a sample (for example 1,000 random tennis matches), when to bet, who to bet on, a price range and any conditions, and see what it would have made. *All sports · price paths* covers 14 leagues (NFL, college football, NBA, WNBA, college basketball, MLB, NHL, four soccer leagues, UFC, ATP and WTA) and lets you bet on what the price does during the game. See [What you can test](#what-you-can-test).
+- **Markets vs stocks.** Lines up Kalshi probabilities (Fed decisions, tariffs, shutdowns, elections, Tesla, bitcoin and more) with about 100 stocks and ETFs, to test whether the prediction market moves before the stock does.
 
 ## Key results
 
@@ -51,6 +54,39 @@ The two positive NBA results have small samples: 161 and 77 bets. The Edge Lab's
 
 Full tables (35+ strategies, including back-to-backs, runs and line movement) are in `results/`.
 
+## What you can test
+
+### Sports lab
+
+| | Tennis · ATP | NBA · games | NBA · big deficits | All sports · price paths |
+|---|---|---|---|---|
+| Data | Set results + prices | ESPN scores + prices | ESPN scores + prices | Prices only, every 1–2 minutes |
+| Leagues | ATP | NBA | NBA | 14 leagues |
+| When you can bet | Before the match, after set 1 | Before tip-off, end of Q1, halftime, end of Q3 | First time down 10, 15 or 20 | Before the start (5 min, 1 hour, 24 hours), any minute of the game, or on a price trigger |
+
+Price triggers in *All sports* are things like "the first time the favorite falls to 30¢", "the first time either team reaches 90¢", "a team drops 15¢ within 10 minutes" or "a team is 20¢ off its in-game high". You choose the team to watch, the threshold and who to bet on (the team that triggered it, or the other one).
+
+You can then add conditions (league, day of week, start hour, pre-game price, how the line moved in the last hour or day, pre-game volume, minutes into the game, how far the pick is off its high, lead changes so far, and more) and optionally **get out early**: sell at a target, at a stop, or after a set time, instead of holding to the result.
+
+Three tabs read the same bets:
+
+- **Test a bet** - profit, win rate, a likely range, and whether it held in both halves of the sample.
+- **Find a link** - win rate against the price-implied chance, split by any column.
+- **Strongest links** - splits the bet by every condition you could have known in time, ranks the groups, and says how many would look that strong by luck.
+
+### Markets vs stocks
+
+| Tab | Question it answers |
+|---|---|
+| Who moves first | Does Kalshi's daily change line up with the stock's move on the same day, on later days (Kalshi leads) or on earlier days (the stock leads)? |
+| Lag trade | If Kalshi moves X points and the stock hasn't moved yet, does buying (or shorting) the stock at the next open make money after costs? |
+| Hourly shocks | After Kalshi's biggest one-hour jumps, what had the stock already done, and what was left by the first price you could trade? |
+| Announcements | For Fed, CPI, jobs, GDP and unemployment releases: how big was the surprise against Kalshi's price the evening before, and how did the stock react that day and after? |
+| Strongest pairs | Ranks every market-stock pair by how strongly one leads the other, and says how many would pass by luck. |
+| Paper trade | Turns the current lag-trade rule into a settings file for `scripts/alpaca_paper.py`, which places the trade in an Alpaca paper account. |
+
+Kalshi probabilities are read at 4:00pm New York time, the stock close, so "trade at the next open" uses a price you could really have got.
+
 ## How it was done
 
 1. **Data (`colab/`, `scripts/pull_data.py`).** Kalshi's free public API gave minute-by-minute prices for ATP match markets (`KXATPMATCH`), set-winner markets (`KXATPSETWINNER`) and NBA game markets (`KXNBAGAME`). ESPN's public API gave NBA play-by-play with real-world timestamps.
@@ -71,9 +107,31 @@ Add `data/original_run results/original_run` to each command to reproduce the or
 
 To open the Edge Lab locally, run `python -m http.server --directory app` and go to http://localhost:8000.
 
+To refresh the newer data (no API keys needed):
+
+```bash
+python scripts/pull_sports.py     # 14 leagues of in-game price paths from Kalshi (1-2 hours, resumable)
+python scripts/pull_stocks.py     # Kalshi probabilities + Yahoo Finance prices (about 15 minutes)
+```
+
+### Paper trading the lag trade
+
+`scripts/alpaca_paper.py` runs one lag-trade rule on live prices with an [Alpaca](https://alpaca.markets) **paper** account (fake money). Build the rule in the lab's *Paper trade* tab, download `signal.json`, then:
+
+```bash
+export ALPACA_KEY=your_paper_key ALPACA_SECRET=your_paper_secret
+python scripts/alpaca_paper.py signal.json            # dry run: shows what it would do
+python scripts/alpaca_paper.py signal.json --trade    # places the paper order
+```
+
+It reads Kalshi's live probability, checks whether it moved enough while the stock hasn't, places the order, and closes the position after the holding period the next time you run it. It only talks to Alpaca's paper endpoint. It has been checked against live Kalshi data but not against an Alpaca account, so start with the dry run.
+
 ## Repo layout
 
-- `app/` - the Kalshi Edge Lab (open `index.html`); `build_data.py` builds its data
+- `app/` - the Kalshi Edge Lab: `index.html` (sports lab) and `stocks.html` (markets vs stocks); `build_data.py` builds the tennis and NBA score data
+- `app/data/` - the all-sports price paths (one file per league, loaded on demand) and the stocks data
+- `scripts/pull_sports.py`, `scripts/pull_stocks.py` - pull and build everything in `app/data/`
+- `scripts/alpaca_paper.py` - paper-trades a lag-trade rule through Alpaca
 - `index.html` - sends the website's main link straight to the Edge Lab
 - `colab/run_in_colab.ipynb` - one-click notebook that re-runs every result
 - `colab/` - also holds the original Colab notebook and the cleaned-up Colab data-pull scripts
@@ -89,5 +147,8 @@ To open the Edge Lab locally, run `python -m http.server --directory app` and go
 - Pre-match and game-start times are estimated from trading-volume spikes, so they can be off by a few minutes. Set lengths in the Edge Lab are estimates for the same reason.
 - Grand Slam (best-of-5) matches are identified by tournament dates.
 - "Before the match" tennis prices in the Edge Lab are midpoints plus 1¢, because only midpoints were saved for that moment.
-- This is research, not betting advice.
+- *All sports · price paths* has prices but no scores. A falling price is the market's read of the score, not the score itself. Tennis and UFC start times are estimated from the burst in trading, so "before the start" prices for those two can be a few minutes off.
+- In-game bets fill at the ask one sample (1–2 minutes) after the rule is first seen. Faster traders would get better prices; slower ones worse.
+- The stocks page tests hundreds of market-stock pairs, so some look strong by luck. The scanner says how many. Stock trades assume you get the opening price and pay the cost you set; real fills, borrow costs for shorts and taxes are not modelled.
+- This is research, not betting or investment advice.
 
