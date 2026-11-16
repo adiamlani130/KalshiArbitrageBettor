@@ -272,6 +272,7 @@
     wireLink(out, G);
   }
   // Strongest links: split the current bet by every condition you could know in time, and rank the groups.
+  // (The error is floored at "one more win would have moved the average this much", so a group that never won can't look infinitely strong.)
   let SCAN = [];
   function renderScan(rows) {
     const B = bets(rows), out = $("view-scan");
@@ -279,7 +280,7 @@
     const used = new Set(S.filters.map((f) => f.key)), all = [];
     for (const c of ds().cols) {
       if (c.at > momentAt() || c.type === "date" || c.type === "text" || used.has(c.key)) continue;
-      for (const g of groups(B, c.key, 4)) if (g.n >= 40) all.push(Object.assign(g, { col: c, z: g.roi / ((g.hi - g.lo) / 3.92 || 1e9) }));
+      for (const g of groups(B, c.key, 4)) if (g.n >= 40) all.push(Object.assign(g, { col: c, z: g.roi / Math.max((g.hi - g.lo) / 3.92, 1 / Math.max(0.02, g.price) / g.n) }));
     }
     SCAN = all.sort((a, b) => Math.abs(b.z) - Math.abs(a.z)).slice(0, 25);
     const strong = all.filter((g) => Math.abs(g.z) > 1.96).length;
