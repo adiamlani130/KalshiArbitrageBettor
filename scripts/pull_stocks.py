@@ -59,6 +59,8 @@ THEMES = {
            "AAPL GOOGL MSFT META UBER BA HOOD NVDA AMZN"),
  "index": ("Index, gold & oil targets", "KXINXY INXY KXINXMAXY KXINXMINY KXINXPOS KXINXEOYCLOSE KXINXMAX2026 KXNASDAQ100Y NASDAQ100Y KXNASDAQ100MAXY KXNASDAQ100MINY KXRUTA KXRUTH KXRUTL KXGOLDYEAR KXGOLDEOY KXGOLDY KXWTIMAX KXWTIMIN WTIMAX WTIMIN KXSILVERYEAR KXINXVSGOLD KXINXVSBTC KXWTIVSBRENT",
            "SPY QQQ IWM DIA GLD GDX SLV USO XLE XOM CVX OXY VXX TLT"),
+ "mergers": ("Mergers & takeovers", "KXTAKEOVERACQWB KXACQANNOUNCEEBAY KXTAKEOVERNEE KXCOMPANYACTIONEA KXCOMPANYACTIONMERGER KXTAKEOVERUNP KXACQUANNOUNCEBANCOS KXACQPYPL KXACQANNOUNCEWDAY KXACQANNOUNCESBUX KXACQANNOUNCEGDDY",
+             "WBD PSKY NFLX EBAY GME D NEE EA TSLA UNP NSC PYPL WDAY SBUX GDDY CMCSA"),
  "crypto": ("Bitcoin & crypto", "KXBTCMAXY KXBTCMINY KXBTCY KXBTC2025100 KXBTCMAX150 KXETHMAXY KXETHMINY KXETHY KXBTCVSGOLD KXCHINAUNBANBTC",
             "COIN MSTR IBIT MARA HOOD ARKK QQQ"),
 }
@@ -145,7 +147,7 @@ def pull():
         allm = dict(zip(series, ex.map(lambda s: cached("mk_" + s, lambda: markets(s)), series)))
     now, t0, picked = int(time.time()), ts(START + "T00:00:00Z"), []
     for s, ms in allm.items():
-        ok = [m for m in ms if fv(m) >= MIN_VOLUME and min(ts(m["close_time"]), now) - max(ts(m["open_time"]), t0) >= MIN_DAYS * 86400]
+        ok = [m for m in ms if fv(m) >= (5000 if series[s] == "mergers" else MIN_VOLUME) and min(ts(m["close_time"]), now) - max(ts(m["open_time"]), t0) >= MIN_DAYS * 86400]
         picked += [(s, m) for m in sorted(ok, key=lambda m: -fv(m))[:PER_SERIES]]
     log(len(series), "series,", len(picked), "markets picked")
     def one(x):
@@ -195,6 +197,14 @@ def build():
             if i is not None: c[i] = round(adj, 3); o[i] = round(op * adj / cl, 3)
         if sum(v is not None for v in c) > 60: px[tk] = {"o": o, "c": c}
         if tk in TICKERS: hourly[tk] = [r for r in load("px_1h_" + tk)]
+    # delisted stocks Yahoo no longer serves (e.g. a takeover target after the deal closed): data/manual/<TICKER>.csv
+    manual = os.path.join(ROOT, "data", "manual")
+    for f in sorted(os.listdir(manual)) if os.path.isdir(manual) else []:
+        o, c = [None] * len(dates), [None] * len(dates)
+        for line in open(os.path.join(manual, f)).read().split()[1:]:
+            d, op, cl = line.split(","); i = di.get(d)
+            if i is not None: o[i], c[i] = float(op), float(cl)
+        px[f[:-4]] = {"o": o, "c": c}
     log(len(px), "tickers,", len(dates), "days")
 
     signals, shocks = [], []

@@ -3,7 +3,7 @@
   const D = window.STOCK_DATA, $ = (id) => document.getElementById(id);
   if (!D) { $("view").innerHTML = `<div class="empty">No data yet. Run <code>python scripts/pull_stocks.py</code>.</div>`; return; }
   const N = D.dates.length, STAKE = 10000;
-  const TABS = [["lead", "Who moves first"], ["trade", "Lag trade"], ["shock", "Hourly shocks"], ["news", "Announcements"], ["scan", "Strongest pairs"], ["paper", "Paper trade"]];
+  let TABS = [["lead", "Who moves first"], ["trade", "Lag trade"], ["shock", "Hourly shocks"], ["news", "Announcements"], ["scan", "Strongest pairs"], ["paper", "Paper trade"]];
   const S = { tab: "lead", theme: "fed", sig: 0, tk: "TLT", hedge: 0, thr: 5, look: 1, dir: "auto", gap: "", entry: "open", hold: 3, cost: 0.05, scope: "one",
               shockMin: 8, shockTheme: "pair", kind: "Fed decision", drift: 3, earnTk: "all", scanBy: "lead", scanScope: "linked" };
 
@@ -308,12 +308,12 @@ python scripts/alpaca_paper.py signal.json --trade    # places the paper order</
     if (!D.px[S.tk]) S.tk = linked[0];
     const opt = (t) => `<option${t === S.tk ? " selected" : ""}>${t}</option>`;
     $("tk").innerHTML = `<optgroup label="Linked to this theme">${linked.map(opt).join("")}</optgroup><optgroup label="Everything else">${rest.map(opt).join("")}</optgroup>`;
-    for (const k of ["hedge", "thr", "look", "dir", "gap", "entry", "hold", "cost", "scope"]) $(k).value = S[k];
+    for (const k of ["hedge", "thr", "look", "dir", "gap", "entry", "hold", "cost", "scope"]) if ($(k)) $(k).value = S[k];
     const s = sig(), [a, b] = span(s);
     $("pairnote").textContent = `${s.id} · ${D.dates[a]} to ${D.dates[b]} · ${Math.round(s.vol).toLocaleString()} contracts traded.`;
-    $("rulepanel").hidden = !(S.tab === "trade" || S.tab === "paper");
+    if ($("rulepanel")) $("rulepanel").hidden = !(S.tab === "trade" || S.tab === "paper");
   }
-  function render() { sync(); $("view").innerHTML = VIEWS[S.tab](); }
+  function render() { sync(); $("view").innerHTML = VIEWS[S.tab](); if (S.after) S.after(); }
   document.addEventListener("click", (e) => {
     const t = e.target.closest("[data-tab],[data-pair],#dl"); if (!t) return;
     if (t.dataset.tab) S.tab = t.dataset.tab;
@@ -325,10 +325,13 @@ python scripts/alpaca_paper.py signal.json --trade    # places the paper order</
     const t = e.target, k = t.dataset.s || t.id; if (!(k in S)) return;
     const num = ["thr", "look", "hold", "cost", "shockMin", "drift", "hedge"].includes(k);
     if (k === "scanBy" || k === "scanScope" || k === "hedge") SCANKEY = "";
-    S[k] = k === "sig" ? +t.value : k === "gap" ? t.value : num ? Math.max(0, +t.value || 0) : t.value;
+    S[k] = k === "sig" ? +t.value : k === "gap" ? t.value : num ? Math.max(0, +t.value || 0) : t.type === "number" ? (t.value === "" ? "" : +t.value) : t.value;
     if (k === "theme") { S.sig = -1; if (!D.themes[S.theme].tickers.includes(S.tk)) S.tk = D.themes[S.theme].tickers[0]; }
     render();
   });
   $("built").textContent = `Data built ${D.built}: ${D.signals.length} Kalshi markets, ${Object.keys(D.px).length} stocks and ETFs, ${D.dates[0]} to ${D.dates[N - 1]}.`;
-  render();
+  // The Strategies page (strategies.js) adds its own tabs on top of the same data and helpers.
+  window.SLAB = { D, S, N, STAKE, esc, pct, pts, money, cls, mean, C, O, ret, dP, corr, link, ranks, lagPairs, sig, span, short, stats,
+                  lineChart, barChart, scatter, legend, tile, table, VIEWS, render, setTabs: (t, first) => { TABS = t; S.tab = first; } };
+  document.addEventListener("DOMContentLoaded", render);
 })();
