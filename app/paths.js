@@ -67,8 +67,8 @@
   const watchP = { id: "w", label: "Watch", def: "fav", options: WATCH };
   const MOMENTS = [
     { id: "pre", label: "Just before the start", phrase: "just before the start", at: 0 },
-    { id: "h1", label: "1 hour before the start", phrase: "an hour before the start", at: 0 },
-    { id: "h24", label: "24 hours before the start", phrase: "a day before the start", at: 0 },
+    { id: "h1", label: "1 hour before the start", phrase: "an hour before the start", at: -1 },
+    { id: "h24", label: "24 hours before the start", phrase: "a day before the start", at: -1 },
     { id: "t", label: "A set time into the game", phrase: (p) => `${p.t} minutes into the game`, at: 1, params: [P("t", "Minutes after the start", 30, 2, 400)] },
     { id: "below", label: "When a team's price first falls to…", phrase: (p) => `the first time ${wl(p.w)} falls to ${p.x}¢ or less`, at: 1, trig: true, params: [watchP, X] },
     { id: "above", label: "When a team's price first rises to…", phrase: (p) => `the first time ${wl(p.w)} reaches ${p.x}¢ or more`, at: 1, trig: true, params: [watchP, Object.assign({}, X, { def: 80 })] },
@@ -105,6 +105,7 @@
   // ---------------------------------------------------------------- the bet
   const SIDES_FIXED = [{ id: "fav", label: "The pre-game favorite" }, { id: "dog", label: "The pre-game underdog" },
                        { id: "home", label: "The home team" }, { id: "away", label: "The away team" }];
+  const SIDES_EARLY = [{ id: "fav", label: "The favorite at that time" }, { id: "dog", label: "The underdog at that time" }].concat(SIDES_FIXED.slice(2));
   const SIDES_TRIG = [{ id: "trig", label: "The team that triggered it" }, { id: "other", label: "The other team" }].concat(SIDES_FIXED);
   const SIDES_T = [{ id: "leader", label: "Whoever is ahead on price" }, { id: "trailer", label: "Whoever is behind on price" }].concat(SIDES_FIXED);
   function pickSide(r, side, hit, i) {
@@ -116,10 +117,12 @@
   }
   function bet(r, moment, side, p, exit) {
     const mo = MOMENTS.find((m) => m.id === moment);
-    if (!mo.at) {   // before the game: one price, hold to the end
+    if (mo.at <= 0) {   // before the game: one price, hold to the end
       const q = r[moment]; if (!q) return null;
-      const s = pickSide(r, side, null, 0); if (s == null) return null;
-      return { p: q[s][1] / 100, won: r.win === s, pick: r.names[s], x: { pick_fav: s === r.fav, pick_home: r.home === 0 ? s === 0 : null, pick_pre: (r.pre[s][0] + r.pre[s][1]) / 200 } };
+      // "Favorite" means the favorite at the moment you bet. Using the closing line for an earlier bet would be peeking.
+      const favNow = q[0][0] + q[0][1] >= q[1][0] + q[1][1] ? 0 : 1;
+      const s = side === "fav" ? favNow : side === "dog" ? 1 - favNow : pickSide(r, side, null, 0); if (s == null) return null;
+      return { p: q[s][1] / 100, won: r.win === s, pick: r.names[s], x: { pick_fav: s === favNow, pick_home: r.home === 0 ? s === 0 : null, pick_pre: (r.pre[s][0] + r.pre[s][1]) / 200 } };
     }
     const hit = find(r, moment, p); if (!hit) return null;
     const i = hit.i, e = i + 1;                     // see it at sample i, get filled one sample (1-2 minutes) later
@@ -152,13 +155,13 @@
   }
 
   const cols = [
-    { key: "date", label: "Date", type: "date", at: 0 },
-    { key: "league", label: "League", type: "cat", at: 0 },
-    { key: "sport", label: "Sport", type: "cat", at: 0 },
-    { key: "stage", label: "Season stage", type: "cat", at: 0 },
-    { key: "weekday", label: "Day of the week", type: "cat", at: 0 },
-    { key: "hour", label: "Start hour (US Eastern, 0-23)", type: "num", at: 0 },
-    { key: "match", label: "Team or player name contains", type: "text", at: 0 },
+    { key: "date", label: "Date", type: "date", at: -1 },
+    { key: "league", label: "League", type: "cat", at: -1 },
+    { key: "sport", label: "Sport", type: "cat", at: -1 },
+    { key: "stage", label: "Season stage", type: "cat", at: -1 },
+    { key: "weekday", label: "Day of the week", type: "cat", at: -1 },
+    { key: "hour", label: "Start hour (US Eastern, 0-23)", type: "num", at: -1 },
+    { key: "match", label: "Team or player name contains", type: "text", at: -1 },
     { key: "fav_name", label: "Favorite's name contains", type: "text", at: 0 },
     { key: "fav_pre", label: "Favorite's price just before the start", type: "num", at: 0, pct: true },
     { key: "home_pre", label: "Home team's price just before the start", type: "num", at: 0, pct: true },
@@ -166,8 +169,8 @@
     { key: "move_24h", label: "Favorite's price move in the last 24 hours", type: "num", at: 0, pct: true },
     { key: "move_open", label: "Favorite's price move since the market opened", type: "num", at: 0, pct: true },
     { key: "pvol", label: "Contracts traded before the start", type: "num", at: 0 },
-    { key: "pick_fav", label: "Your pick was the pre-game favorite", type: "bool", at: 0, dyn: true },
-    { key: "pick_home", label: "Your pick is the home team", type: "bool", at: 0, dyn: true },
+    { key: "pick_fav", label: "Your pick was the favorite when you bet (pre-game favorite for in-game bets)", type: "bool", at: -1, dyn: true },
+    { key: "pick_home", label: "Your pick is the home team", type: "bool", at: -1, dyn: true },
     { key: "pick_pre", label: "Your pick's price before the start", type: "num", at: 0, pct: true, dyn: true },
     { key: "elapsed", label: "Minutes into the game when you bet", type: "num", at: 1, dyn: true },
     { key: "pick_chg", label: "Your pick's price change since the start", type: "num", at: 1, pct: true, dyn: true },
@@ -191,7 +194,7 @@
   window.DATASETS.paths = {
     label: "All sports · price paths", unit: "games", cols, bet, moments: MOMENTS, defaultX: "fav_pre",
     get rows() { return this.leagues.filter((l) => this.on[l] && loaded[l]).flatMap((l) => loaded[l]); },
-    sidesFor: (m) => { const mo = MOMENTS.find((x) => x.id === m); return mo.trig ? SIDES_TRIG : mo.id === "t" ? SIDES_T : SIDES_FIXED; },
+    sidesFor: (m) => { const mo = MOMENTS.find((x) => x.id === m); return mo.trig ? SIDES_TRIG : mo.id === "t" ? SIDES_T : mo.at < 0 ? SIDES_EARLY : SIDES_FIXED; },
     sides: SIDES_FIXED, exits: true,
     leagues: Object.keys(IDX.leagues), meta: IDX.leagues, on: { nfl: true }, ensure(done) { return ensure(this.leagues.filter((l) => this.on[l]), done); },
     note: "Prices only: a team's price falling is the market's read of the score. Bets fill at the ask 1–2 minutes after the rule is first seen.",

@@ -111,3 +111,4 @@ pre.code { background: var(--bg); border: 1px solid var(--line); border-radius: 
 
 .field { grid-template-columns: minmax(0, 1fr) }
 .sheet > *, #view > div, #view > div > * { min-width: 0 }
+.sheet > div > * { min-width: 0 }

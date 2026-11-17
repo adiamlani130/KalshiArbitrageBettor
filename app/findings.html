@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Findings</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="What survived: 1,630 betting rules and 2,621 market-stock pairs, each found on one period and tested once on another.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+<div class="wrap">
+  <header class="top">
+    <nav class="pages" aria-label="Pages"><a href="index.html">Sports lab</a><a href="stocks.html">Markets vs stocks</a><a href="strategies.html">Strategies &amp; hedging</a><a href="findings.html" aria-current="page">Findings</a></nav>
+    <span class="eyebrow">Found on one period · tested once on another</span>
+    <h1>What survived</h1>
+    <p class="lede" id="lede"></p>
+  </header>
+  <main class="sheet" id="out"></main>
+  <footer>
+    <p><b>Method.</b> Each league's games are split by date: the first 60% to search, the last 40% held back. A fixed grid of rules is searched; a rule is kept only if it is clearly profitable in the search period (t-statistic 2+, 60+ bets). Kept rules are tested once on the held-back games and must pass a Benjamini-Hochberg false-discovery rate of 10%. Market-stock pairs are found in the first half of their days and checked in the second half. Every bet is $10 at the ask, one sample (1–2 minutes) after the rule is seen, after Kalshi's fee.</p>
+    <p>Reproduce with <code>python analysis/discover.py</code>. Research, not betting or investment advice. <span id="built"></span></p>
+  </footer>
+</div>
+<script src="data/findings.js"></script>
+<script>
+(function () {
+  const F = window.FINDINGS, $ = (id) => document.getElementById(id); if (!F) return;
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const pct = (v, d = 1) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v * 100).toFixed(d) + "%", cls = (v) => (v >= 0 ? "pos" : "neg");
+  const s = F.sports, ok = s.candidates.filter((r) => r.ok), same = F.stocks["Same day"], lead = F.stocks["Kalshi first, stock next day"], lag = F.stocks["Stock first, Kalshi next day"];
+  const tile = (k, v, c = "") => `<div class="tile"><span>${k}</span><b class="${c}">${v}</b></div>`;
+  const table = (head, rows) => `<div class="tablewrap" style="max-height:420px;overflow-y:auto"><table><thead><tr>${head.map((h) => `<th class="${h[1] || ""}">${h[0]}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+  const row = (r, lost) => `<tr><td class="wrap">${esc(r.rule)}</td><td>${esc(r.league)}</td><td>${esc(r.band)}</td><td class="n">${r.dn}</td><td class="n ${cls(r.droi)}">${pct(r.droi)}</td><td class="n">${r.hn}</td><td class="n ${cls(r.hroi)}">${pct(r.hroi)}</td><td>${lost === true ? '<span class="neg">Lost twice</span>' : r.ok ? '<span class="pos">Held up</span>' : r.hroi > 0 ? "Weaker" : '<span class="neg">Failed</span>'}</td></tr>`;
+  const head = [["Rule"], ["League"], ["Pre-game price"], ["Bets", "n"], ["Search period", "n"], ["Bets", "n"], ["Held-back games", "n"], ["Verdict"]];
+  // replication plot: every rule's return in the search period (x) against the held-back period (y)
+  const W = 680, H = 300, L = 46, R = 12, T = 12, B = 30, lim = 0.6, X = (v) => L + (W - L - R) * (Math.max(-lim, Math.min(lim, v)) + lim) / (2 * lim), Y = (v) => T + (H - T - B) * (1 - (Math.max(-lim, Math.min(lim, v)) + lim) / (2 * lim));
+  const dots = s.cloud.map(([a, b]) => `<circle cx="${X(a).toFixed(1)}" cy="${Y(b).toFixed(1)}" r="2" fill="var(--market)" opacity=".45"/>`).join("")
+    + s.candidates.map((r) => `<circle cx="${X(r.droi).toFixed(1)}" cy="${Y(r.hroi).toFixed(1)}" r="5" fill="${r.ok ? "var(--good)" : "var(--warn)"}" stroke="var(--sheet)" stroke-width="1.5"><title>${esc(r.rule)} · ${esc(r.league)}</title></circle>`).join("");
+  const grid = [-0.5, -0.25, 0.25, 0.5].map((t) => `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line-2)"/><text x="${L - 6}" y="${Y(t) + 4}" text-anchor="end">${t * 100}%</text><text x="${X(t)}" y="${H - 12}" text-anchor="middle">${t * 100}%</text>`).join("");
+  const plot = `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Each rule's return in the search period against the held-back period">${grid}
+    <line x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--ink-3)"/><line x1="${X(0)}" x2="${X(0)}" y1="${T}" y2="${H - B}" stroke="var(--ink-3)"/>${dots}</svg></div>`;
+  $("lede").innerHTML = `A computer tried <b>${s.tested.toLocaleString()}</b> betting rules on ${s.games.toLocaleString()} games and <b>${same.tested.toLocaleString()}</b> market-stock pairs. Each idea was found on one stretch of time and then tested once on a later stretch it had never seen. This page shows what was left.`;
+  $("out").innerHTML = `<div style="display:grid;gap:22px">
+    <p class="headline">Almost nothing makes money. <b>${s.candidates.length}</b> of ${s.tested.toLocaleString()} rules looked profitable in the search period, fewer than the roughly ${Math.round(s.tested * 0.0228)} luck alone would produce, and <b>${ok.length}</b> held up on the held-back games. What does hold up is the way to <i>lose</i>: <b>${s.n_losers}</b> rules lost clearly in both periods, nearly all of them bets on the team that is behind.</p>
+    <div class="tiles">${tile("Rules tried", s.tested.toLocaleString())}${tile("Looked profitable", s.candidates.length)}${tile("Held up", ok.length, "pos")}${tile("Lost in both periods", s.n_losers, "neg")}${tile("Same direction both periods", Math.round(s.agree / s.tested * 100) + "%")}${tile("Market-stock links that held", `${same.replicated} of ${same.found}`)}</div>
+    <div><h2>1. Sports rules that looked profitable</h2><p class="note" style="margin:6px 0 10px">Green held up on the held-back games after correcting for the number of rules tried. Treat even those as leads to keep watching, not money in the bank.</p>${table(head, s.candidates.map((r) => row(r)))}</div>
+    <div><h2>2. Every rule, search period vs held-back period</h2><p class="note" style="margin:6px 0 10px">Each grey dot is one rule: its return when it was searched for (across) and on the later games (up). Dots in the lower left lost twice. The top right, where real edges would sit, is nearly empty. Coloured dots are the rules from the table above.</p>${plot}</div>
+    <div><h2>3. The reliable way to lose</h2><p class="note" style="margin:6px 0 10px">The strongest repeatable pattern in the data: backing whoever is behind, or fading a team that has reached 90¢, loses in both periods. Prices on long shots are too high. The other side of these bets is not automatically profitable, because the fee and the bid/ask spread eat the gap.</p>${table(head, s.losers.map((r) => row(r, true)))}</div>
+    <div><h2>4. Prediction markets and stocks</h2><p class="note" style="margin:6px 0 10px">A link counts as found if it is very strong (t-statistic 3+) in the first half of a pair's days, and as held up if it keeps its direction and stays clear (t-statistic 2+) in the second half.</p>
+      ${table([["Timing"], ["Pairs tried", "n"], ["Strong in first half", "n"], ["Expected by luck", "n"], ["Held up in second half", "n"]], Object.entries(F.stocks).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="n">${v.tested.toLocaleString()}</td><td class="n">${v.found}</td><td class="n">${v.by_luck}</td><td class="n ${v.replicated ? "pos" : "neg"}">${v.replicated}</td></tr>`))}
+      <p class="headline" style="margin-top:12px">Kalshi and stocks move <b>together</b>: ${same.replicated} of ${same.found} same-day links held up. Neither one <b>leads</b> the other by a day: ${lead.replicated} of ${lead.found} and ${lag.replicated} of ${lag.found} held up, so there is no next-day lag to trade in either direction.</p>
+      <h3 style="margin:14px 0 8px">Strongest same-day links that held up</h3>
+      ${table([["Kalshi market"], ["Stock"], ["Days", "n"], ["Link, first half", "n"], ["Link, second half", "n"]], same.top.map((r) => `<tr><td class="wrap">${esc(r.market)}</td><td>${r.stock}</td><td class="n">${r.days}</td><td class="n ${cls(r.r1)}">${r.r1.toFixed(2)}</td><td class="n ${cls(r.r2)}">${r.r2.toFixed(2)}</td></tr>`))}</div></div>`;
+  $("built").textContent = `Built ${F.built}.`;
+})();
+</script>

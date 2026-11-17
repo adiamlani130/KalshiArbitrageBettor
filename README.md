@@ -10,7 +10,7 @@ This project tests well-known sports "trends" against real Kalshi prediction-mar
 
 **Short answer:** no simple rule reliably beats the market after fees. The one pattern that shows up everywhere is the **favorite-longshot bias**: long shots (big comebacks, big underdogs) are overpriced, while heavy favorites are priced about right.
 
-**Try it yourself:** the [Kalshi Edge Lab](https://adiamlani130.github.io/KalshiArbitrageBettor/) runs in the browser with nothing to install. It has three pages:
+**Try it yourself:** the [Kalshi Edge Lab](https://adiamlani130.github.io/KalshiArbitrageBettor/) runs in the browser with nothing to install. It has four pages:
 
 - **Sports lab.** Build any strategy: pick a sport, a sample (for example 1,000 random tennis matches), when to bet, who to bet on, a price range and any conditions, and see what it would have made. *All sports · price paths* covers 14 leagues (NFL, college football, NBA, WNBA, college basketball, MLB, NHL, four soccer leagues, UFC, ATP and WTA) and lets you bet on what the price does during the game. See [What you can test](#what-you-can-test).
 - **Markets vs stocks.** Lines up Kalshi probabilities (Fed decisions, tariffs, shutdowns, elections, Tesla, bitcoin and more) with about 100 stocks and ETFs, to test whether the prediction market moves before the stock does.
@@ -55,6 +55,25 @@ The two positive NBA results have small samples: 161 and 77 bets. The Edge Lab's
 Full tables (35+ strategies, including back-to-backs, runs and line movement) are in `results/`.
 
 - **Strategies & hedging.** Six less obvious tests: Kalshi against options-implied odds, a merger spread against Kalshi's deal odds, baskets of second-order stocks, hedging a stock with a contract, trading the contract after the stock moves, and betting the ladder before macro news.
+
+- **Findings.** What is left after a computer tries 1,630 betting rules and 2,621 market-stock pairs, finding each on one period and testing it once on a later one.
+
+## What survived out of sample
+
+`analysis/discover.py` splits every league's games by date (first 60% to search, last 40% held back), searches a fixed grid of rules, and tests the ones that look profitable once on the held-back games with a 10% false-discovery rate.
+
+| | Tried | Looked good in the search period | Held up on held-back data |
+|---|---:|---:|---:|
+| Sports betting rules (16,930 games) | 1,630 | 11 (luck alone gives about 37) | 1 |
+| Rules that lose in both periods | 1,630 | | 167 |
+| Kalshi and a stock moving on the same day | 2,621 | 190 (luck: 7) | 136 |
+| Kalshi leading the stock by a day | 2,621 | 15 | 0 |
+| The stock leading Kalshi by a day | 2,606 | 13 | 0 |
+
+- **No rule is a reliable winner.** The one survivor is narrow: in WTA matches that start close (favorite at 50–60¢), buying whoever is ahead on price 30 minutes in returned +8.7% in the search period and +13.5% on 177 held-back matches. One survivor out of 1,630 tries is a lead to keep watching, not a strategy.
+- **Losing is repeatable.** Backing whoever is behind an hour in lost 17.5% and then 19.9% across all 14 leagues (5,735 held-back bets). Long shots are overpriced in every sport.
+- **Prediction markets and stocks move together, and neither leads.** Same-day links replicate; next-day leads in either direction do not.
+- **The sweep caught a bug.** Its first run showed tennis favorites bought an hour early earning 10–15%. That was look-ahead: "favorite" was being decided from the closing line. Early bets now use the favorite at the time of the bet, and a test guards it.
 
 ## What you can test
 
@@ -142,6 +161,14 @@ python scripts/alpaca_paper.py signal.json --trade    # places the paper order
 
 It reads Kalshi's live probability, checks whether it moved enough while the stock hasn't, places the order, and closes the position after the holding period the next time you run it. It only talks to Alpaca's paper endpoint. It has been checked against live Kalshi data but not against an Alpaca account, so start with the dry run.
 
+## Tests
+
+```bash
+python -m unittest discover tests
+```
+
+Sixteen checks run on every push: the fee and profit math, the trigger rules on hand-built price paths, the no-look-ahead rule for early bets, the false-discovery correction, the published data (every league file loads, final prices agree with results, in-game prices are calibrated), and that the browser engine and the Python engine return the same bets and the same profit on the NFL file.
+
 ## Repo layout
 
 - `app/` - the Kalshi Edge Lab: `index.html` (sports lab) and `stocks.html` (markets vs stocks); `build_data.py` builds the tennis and NBA score data
@@ -152,7 +179,8 @@ It reads Kalshi's live probability, checks whether it moved enough while the sto
 - `colab/run_in_colab.ipynb` - one-click notebook that re-runs every result
 - `colab/` - also holds the original Colab notebook and the cleaned-up Colab data-pull scripts
 - `scripts/pull_data.py` - the same data pull as one script you can run anywhere
-- `analysis/` - analysis scripts; `common.py` holds the bet and fee math
+- `analysis/` - analysis scripts; `common.py` holds the bet and fee math; `engine.py` is the Edge Lab's engine in Python and `discover.py` is the out-of-sample sweep
+- `tests/` - the test suite
 - `data/` - raw data from Kalshi and ESPN (`original_run/` is the first Colab pull)
 - `results/` - output tables (`original_run/` holds the original results)
 - `docs/` - the write-up and the verification report
