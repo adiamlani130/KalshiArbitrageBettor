@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Strategies &amp; Hedging</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Test whether Kalshi prediction-market prices lead, lag or move with stocks: lead-lag, lag trades, hourly shocks, announcements and a pair scanner.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<div class="wrap">
+  <header class="top">
+    <nav class="pages" aria-label="Pages"><a href="index.html">Sports lab</a><a href="stocks.html">Markets vs stocks</a><a href="strategies.html" aria-current="page">Strategies &amp; hedging</a></nav>
+    <span class="eyebrow">Kalshi probabilities · Yahoo Finance prices</span>
+    <h1>Strategies &amp; Hedging</h1>
+    <p class="lede">Six less obvious ways to use a prediction market: price it against the options market, trade the takeover spread against it, build baskets of second-order stocks, hedge a stock with a contract, trade the contract when the stock moves first, and bet the ladder before macro news.</p>
+  </header>
+
+  <div class="bench">
+    <aside class="rail">
+      <section class="panel" id="pairpanel">
+        <h3>Pair</h3>
+        <label class="field"><span>Theme</span><select id="theme"></select></label>
+        <label class="field"><span>Kalshi market</span><select id="sig"></select></label>
+        <label class="field"><span>Stock or ETF</span><select id="tk"></select></label>
+        <label class="field"><span>Measure the stock</span><select id="hedge"><option value="0">On its own</option><option value="1">Against the S&amp;P 500 (minus SPY)</option></select></label>
+        <p class="hint" id="pairnote"></p>
+      </section>
+      </aside>
+
+    <main class="sheet">
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div id="view"></div>
+    </main>
+  </div>
+
+  <footer>
+    <p><b>Where the data comes from.</b> Kalshi prices are from Kalshi's public API; stock, index, oil and crypto prices and the VIX, VXN and OVX volatility indexes are from Yahoo Finance. Bitcoin and ether use 30-day realized volatility because they have no free volatility index.</p>
+    <p><b>What "options-implied" means here.</b> Real option chains could not be downloaded for this build, so the options market's view is rebuilt from its volatility index with a standard lognormal model and no skew. It prices far-away targets less reliably than a real call spread would. <code>scripts/options_binary.py</code> does the real call-spread calculation on live chains.</p>
+    <p>Research, not investment advice. Most tests here rest on a handful of independent outcomes, so read the pattern, not the decimals. <span id="built"></span></p>
+  </footer>
+</div>
+
+<script src="data/stocks.js"></script>
+<script src="data/targets.js"></script>
+<script src="stocks.js"></script>
+<script src="strategies.js"></script>

@@ -2,11 +2,12 @@
   const DS = window.DATASETS, $ = (id) => document.getElementById(id);
   const STAKE = 10;
   const S = { ds: "tennis", moment: null, side: null, pmin: 1, pmax: 99, filters: [], from: "", to: "",
-              take: "all", n: 1000, seed: 1, tab: "bet", x: null, bins: 5, preset: null };
+              take: "all", n: 1000, seed: 1, tab: "bet", x: null, bins: 5, preset: null, params: {}, exit: {} };
 
   // ---------------------------------------------------------------- math
   const fee = (p, c) => Math.ceil(0.07 * c * p * (1 - p) * 100 - 1e-9) / 100;
   const pnl = (p, won) => { const c = STAKE / p; return (won ? c - STAKE : -STAKE) - fee(p, c); };
+  const sellPnl = (p, q) => { const c = STAKE / p; return c * q - STAKE - fee(p, c) - fee(q, c); };   // sold early at q: fee both ways
   const odds = (p) => p >= 0.5 ? "−" + Math.round(100 * p / (1 - p)) : "+" + Math.round(100 * (1 - p) / p);
   const pct = (v, d = 1) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v * 100).toFixed(d) + "%";
   const money = (v) => (v > 0 ? "+$" : v < 0 ? "−$" : "$") + Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -16,7 +17,10 @@
 
   const ds = () => DS[S.ds];
   const col = (k) => ds().cols.find((c) => c.key === k);
-  const momentAt = () => (ds().moments.find((m) => m.id === S.moment) || {}).at ?? 0;
+  const moment = () => ds().moments.find((m) => m.id === S.moment) || ds().moments[0];
+  const momentAt = () => moment().at ?? 0;
+  const sides = () => (ds().sidesFor ? ds().sidesFor(S.moment) : ds().sides);
+  const val = (b, k) => (b.x && k in b.x ? b.x[k] : b.r[k]);
   const fmtVal = (c, v) => v == null ? "—" : c.type === "bool" ? (v ? "Yes" : "No") : c.pct ? (v * 100).toFixed(0) + "¢" : typeof v === "number" ? +v.toFixed(1) : v;
 
   // ---------------------------------------------------------------- sample → filters → bets
@@ -27,22 +31,26 @@
     if (S.take === "random") { const R = rng(S.seed); rows = rows.map((r) => [R(), r]).sort((a, b) => a[0] - b[0]).slice(0, n).map((x) => x[1]); }
     return rows;
   }
-  function passes(r, f) {
-    const v = r[f.key]; if (v == null) return false;
+  function passes(v, f) {
     const c = col(f.key); if (!c) return true;
+    if (c.type === "text") return !f.val || (v != null && String(v).toLowerCase().includes(String(f.val).toLowerCase()));
+    if (v == null) return false;
     if (c.type === "bool") return f.val === "" || f.val == null || v === (f.val === true || f.val === "true");
     if (c.type === "cat") return !f.val || v === f.val;
     const lo = f.min === "" || f.min == null ? -Infinity : +f.min, hi = f.max === "" || f.max == null ? Infinity : +f.max;
     return c.type === "date" ? (!f.min || v >= f.min) && (!f.max || v <= f.max) : v >= lo && v <= hi;
   }
   function bets(rows) {
-    const out = [];
+    const out = [], stat = S.filters.filter((f) => !(col(f.key) || {}).dyn), dyn = S.filters.filter((f) => (col(f.key) || {}).dyn);
     for (const r of rows) {
-      if (!S.filters.every((f) => passes(r, f))) continue;
-      const b = ds().bet(r, S.moment, S.side);
+      if (!stat.every((f) => passes(r[f.key], f))) continue;
+      const b = ds().bet(r, S.moment, S.side, S.params, S.exit);
       if (!b || b.p == null || !(b.p > 0.009 && b.p < 0.991)) continue;
       if (b.p * 100 < S.pmin - 1e-9 || b.p * 100 > S.pmax + 1e-9) continue;
-      out.push(Object.assign({ r, net: pnl(b.p, b.won) }, b));
+      if (!dyn.every((f) => passes(b.x ? b.x[f.key] : null, f))) continue;
+      b.r = r; b.net = b.sell != null ? sellPnl(b.p, b.sell) : pnl(b.p, b.won);
+      if (b.sell != null) { b.held = b.won; b.won = b.net > 0; }
+      out.push(b);
     }
     return out.sort((a, b) => a.r.date.localeCompare(b.r.date));
   }
@@ -79,6 +87,7 @@
       const opts = allowed.map((a) => `<option value="${a.key}"${a.key === c.key ? " selected" : ""}>${esc(a.label)}</option>`).join("");
       let vals;
       if (c.type === "bool") vals = `<div class="vals one"><select data-i="${i}" data-f="val"><option value="true"${f.val === true || f.val === "true" ? " selected" : ""}>Yes</option><option value="false"${f.val === false || f.val === "false" ? " selected" : ""}>No</option></select></div>`;
+      else if (c.type === "text") vals = `<div class="vals one"><input type="text" placeholder="e.g. Lakers" data-i="${i}" data-f="val" value="${esc(f.val ?? "")}"></div>`;
       else if (c.type === "cat") vals = `<div class="vals one"><select data-i="${i}" data-f="val">${catValues(c.key).map((v) => `<option${v === String(f.val) ? " selected" : ""}>${esc(v)}</option>`).join("")}</select></div>`;
       else { const t = c.type === "date" ? "date" : "number", st = c.pct ? ' step="0.01"' : ' step="1"';
         vals = `<div class="vals"><input type="${t}"${st} placeholder="min" data-i="${i}" data-f="min" value="${esc(f.min ?? "")}"><input type="${t}"${st} placeholder="max" data-i="${i}" data-f="max" value="${esc(f.max ?? "")}"></div>`; }
@@ -89,9 +98,21 @@
     const d = ds();
     renderDatasetButtons(); renderPresets();
     if (!d.moments.some((m) => m.id === S.moment)) S.moment = d.moments[0].id;
-    if (!d.sides.some((s) => s.id === S.side)) S.side = d.sides[0].id;
-    fillSelect($("moment"), d.moments, S.moment); fillSelect($("side"), d.sides, S.side);
+    if (!sides().some((s) => s.id === S.side)) S.side = sides()[0].id;
+    fillSelect($("moment"), d.moments, S.moment); fillSelect($("side"), sides(), S.side);
+    const ps = moment().params || [];
+    ps.forEach((p) => { if (S.params[p.id] == null) S.params[p.id] = p.def; });
+    $("params").innerHTML = ps.map((p) => `<label class="field"><span>${esc(p.label)}</span>${p.options
+      ? `<select data-p="${p.id}">${p.options.map((o) => `<option value="${o.id}"${o.id === S.params[p.id] ? " selected" : ""}>${esc(o.label[0].toUpperCase() + o.label.slice(1))}</option>`).join("")}</select>`
+      : `<input type="number" data-p="${p.id}" min="${p.min}" max="${p.max}" value="${esc(S.params[p.id])}">`}</label>`).join("");
+    $("params").hidden = !ps.length;
+    $("exitpanel").hidden = !(d.exits && momentAt() > 0);
+    for (const k of ["tp", "sl", "tm"]) $("exit-" + k).value = S.exit[k] ?? "";
+    $("leaguebox").hidden = !d.leagues;
+    if (d.leagues) $("leagues").innerHTML = d.leagues.map((l) => `<button class="chip" aria-pressed="${!!d.on[l]}" data-lg="${l}" title="${d.meta[l].n.toLocaleString()} games, ${d.meta[l].first} to ${d.meta[l].last}">${esc(d.meta[l].label)} <i>${d.meta[l].n.toLocaleString()}</i></button>`).join("");
+    $("dsnote").textContent = d.note || ""; $("dsnote").hidden = !d.note;
     const dates = d.rows.map((r) => r.date).sort();
+    if (!dates.length) dates.push("2025-01-01");
     for (const id of ["from", "to"]) { $(id).min = dates[0]; $(id).max = dates[dates.length - 1]; }
     $("from").value = S.from || dates[0]; $("to").value = S.to || dates[dates.length - 1];
     $("take").value = S.take; $("n").value = S.n; $("n").disabled = S.take === "all"; $("reshuffle").hidden = S.take !== "random";
@@ -99,11 +120,10 @@
     $("oddsnote").textContent = `${S.pmin}¢–${S.pmax}¢ is ${odds(Math.max(.01, S.pmin / 100))} to ${odds(Math.min(.99, S.pmax / 100))} in sportsbook odds.`;
     renderFilters();
     if (!S.x || !col(S.x)) S.x = d.defaultX;
-    $("xcol").innerHTML = d.cols.filter((c) => c.type !== "date").map((c) =>
+    $("xcol").innerHTML = d.cols.filter((c) => c.type !== "date" && c.type !== "text").map((c) =>
       `<option value="${c.key}"${c.key === S.x ? " selected" : ""}>${esc(c.label)}${c.at > momentAt() ? " (after your bet)" : ""}</option>`).join("");
     $("bins").value = S.bins;
-    $("tab-bet").setAttribute("aria-selected", S.tab === "bet"); $("tab-link").setAttribute("aria-selected", S.tab === "link");
-    $("view-bet").hidden = S.tab !== "bet"; $("view-link").hidden = S.tab !== "link";
+    for (const t of ["bet", "link", "scan"]) { $("tab-" + t).setAttribute("aria-selected", S.tab === t); $("view-" + t).hidden = S.tab !== t; }
   }
 
   // ---------------------------------------------------------------- charts (plain SVG)
@@ -175,11 +195,13 @@
   }
 
   // ---------------------------------------------------------------- views
-  const sideLabel = () => ds().sides.find((s) => s.id === S.side).label.toLowerCase();
-  const momentLabel = () => { const m = ds().moments.find((m) => m.id === S.moment); return m.phrase || m.label.toLowerCase(); };
+  const sideLabel = () => sides().find((s) => s.id === S.side).label.toLowerCase();
+  const momentLabel = () => { const m = moment(); return typeof m.phrase === "function" ? m.phrase(S.params) : m.phrase || m.label.toLowerCase(); };
+  const exitLabel = () => { const e = S.exit, a = []; if (+e.tp) a.push(`selling at +${+e.tp}¢`); if (+e.sl) a.push(`stopping out at −${+e.sl}¢`); if (+e.tm) a.push(`selling after ${+e.tm} minutes`);
+    return a.length && ds().exits && momentAt() > 0 ? ` (${a.join(", ")}, otherwise holding to the end)` : ""; };
   function renderBet(rows) {
     const B = bets(rows), st = stats(B), v = $("view-bet"), pre = S.preset != null ? PRESETS[S.preset] : null;
-    const compare = pre && pre.ds === S.ds ? `<p class="compare"><b>Original research result</b> for “${esc(pre.label)}”: ${esc(pre.orig)}. That run used a smaller, older data pull; the numbers above use the fresh one.</p>` : "";
+    const compare = pre && pre.ds === S.ds && pre.orig ? `<p class="compare"><b>Original research result</b> for “${esc(pre.label)}”: ${esc(pre.orig)}. That run used a smaller, older data pull; the numbers above use the fresh one.</p>` : "";
     if (!st) { v.innerHTML = compare + `<div class="empty">No bets match these settings. Try widening the price range or removing a condition.</div>`; return; }
     const luck = st.lo > 0 ? ["good", "Likely a real edge", "even the low end of the likely range is profitable"]
       : st.hi < 0 ? ["bad", "Reliably loses", "even the high end of the likely range loses money"]
@@ -189,13 +211,13 @@
       const x = B.filter((q) => q.p * 100 >= a && q.p * 100 < (b === 99 ? 100 : b)), s = stats(x);
       return s ? `<tr><td>${a}–${b}¢ <span class="hint">(${odds(a / 100)} to ${odds(Math.min(.99, b / 100))})</span></td><td class="n">${s.n}</td><td class="n">${(s.won * 100).toFixed(1)}%</td><td class="n ${s.roi >= 0 ? "pos" : "neg"}">${pct(s.roi)}</td></tr>` : "";
     }).join("");
-    const recent = B.slice(-60).reverse().map((b) => `<tr><td>${esc(b.r.date)}</td><td>${esc(b.r.match)}</td><td>${esc(b.pick)}</td><td class="n">${Math.round(b.p * 100)}¢ <span class="hint">${odds(b.p)}</span></td><td>${b.won ? "Won" : "Lost"}</td><td class="n ${b.net >= 0 ? "pos" : "neg"}">${money(b.net)}</td></tr>`).join("");
+    const recent = B.slice(-60).reverse().map((b) => `<tr><td>${esc(b.r.date)}</td><td>${esc(b.r.match)}</td><td>${esc(b.pick)}</td><td class="n">${Math.round(b.p * 100)}¢ <span class="hint">${odds(b.p)}</span></td><td>${b.sell != null ? "Sold " + Math.round(b.sell * 100) + "¢" : b.won ? "Won" : "Lost"}</td><td class="n ${b.net >= 0 ? "pos" : "neg"}">${money(b.net)}</td></tr>`).join("");
     v.innerHTML = `<div style="display:grid;gap:16px">
-      <p class="headline">Betting <b>${esc(sideLabel())}</b> ${esc(momentLabel())} in <b>${st.n.toLocaleString()}</b> ${ds().unit} would have ${st.net >= 0 ? "made" : "lost"} <b class="${st.net >= 0 ? "pos" : "neg"}">${money(st.net).replace(/^[+−]/, "")}</b> on $${st.staked.toLocaleString()} staked, a <b class="${st.roi >= 0 ? "pos" : "neg"}">${pct(st.roi)}</b> return.</p>
+      <p class="headline">Betting <b>${esc(sideLabel())}</b> ${esc(momentLabel())}${esc(exitLabel())} in <b>${st.n.toLocaleString()}</b> ${ds().unit} would have ${st.net >= 0 ? "made" : "lost"} <b class="${st.net >= 0 ? "pos" : "neg"}">${money(st.net).replace(/^[+−]/, "")}</b> on $${st.staked.toLocaleString()} staked, a <b class="${st.roi >= 0 ? "pos" : "neg"}">${pct(st.roi)}</b> return.</p>
       ${compare}
       <div class="tiles">
         <div class="tile"><span>Bets</span><b>${st.n.toLocaleString()}</b></div>
-        <div class="tile"><span>Won</span><b>${(st.won * 100).toFixed(1)}%</b></div>
+        <div class="tile"><span>${exitLabel() ? "Made money" : "Won"}</span><b>${(st.won * 100).toFixed(1)}%</b></div>
         <div class="tile"><span>Typical odds</span><b>${st.odds}</b></div>
         <div class="tile"><span>Staked</span><b>$${st.staked.toLocaleString()}</b></div>
         <div class="tile"><span>Net</span><b class="${st.net >= 0 ? "pos" : "neg"}">${money(st.net)}</b></div>
@@ -211,26 +233,27 @@
       </div></div>`;
     wirePnl(v, B);
   }
-  function groups(B) {
-    const c = col(S.x), k = Math.max(2, +S.bins);
-    const has = B.filter((b) => b.r[S.x] != null);
+  function groups(B, key = S.x, k = Math.max(2, +S.bins)) {
+    const c = col(key);
+    const has = B.filter((b) => val(b, key) != null);
     let G;
     if (c.type === "num") {
-      const vals = has.map((b) => b.r[S.x]).sort((a, b) => a - b);
+      const vals = has.map((b) => val(b, key)).sort((a, b) => a - b);
       const cuts = [...new Set(Array.from({ length: k - 1 }, (_, i) => vals[Math.floor(vals.length * (i + 1) / k)]))];
       const edges = [-Infinity, ...cuts, Infinity];
       G = edges.slice(0, -1).map((lo, i) => {
-        const hi = edges[i + 1], x = has.filter((b) => b.r[S.x] >= lo && b.r[S.x] < hi);
-        const a = x.length ? Math.min(...x.map((b) => b.r[S.x])) : lo, z = x.length ? Math.max(...x.map((b) => b.r[S.x])) : hi;
-        return { label: a === z ? fmtVal(c, a) : `${fmtVal(c, a)}–${fmtVal(c, z)}`, x };
+        const hi = edges[i + 1], x = has.filter((b) => val(b, key) >= lo && val(b, key) < hi);
+        const a = x.length ? Math.min(...x.map((b) => val(b, key))) : lo, z = x.length ? Math.max(...x.map((b) => val(b, key))) : hi;
+        return { label: a === z ? fmtVal(c, a) : `${fmtVal(c, a)}–${fmtVal(c, z)}`, x, f: { key, min: a, max: z } };
       });
     } else {
-      const keys = [...new Set(has.map((b) => String(b.r[S.x])))];
-      G = keys.map((key) => ({ label: c.type === "bool" ? (key === "true" ? "Yes" : "No") : key, x: has.filter((b) => String(b.r[S.x]) === key) }))
-        .sort((a, b) => b.x.length - a.x.length).slice(0, 10);
+      const keys = [...new Set(has.map((b) => String(val(b, key))))];
+      G = keys.map((v) => ({ label: c.type === "bool" ? (v === "true" ? "Yes" : "No") : v, x: has.filter((b) => String(val(b, key)) === v),
+                             f: { key, val: c.type === "bool" ? v === "true" : v } }))
+        .sort((a, b) => b.x.length - a.x.length).slice(0, 12);
     }
     return G.filter((g) => g.x.length).map((g) => { const s = stats(g.x);
-      return { label: g.label, n: s.n, won: s.won, price: g.x.reduce((t, b) => t + b.p, 0) / s.n, roi: s.roi, lo: s.lo, hi: s.hi }; });
+      return { label: g.label, f: g.f, n: s.n, won: s.won, price: g.x.reduce((t, b) => t + b.p, 0) / s.n, roi: s.roi, lo: s.lo, hi: s.hi, r1: s.r1, r2: s.r2 }; });
   }
   function renderLink(rows) {
     const B = bets(rows), out = $("linkout"), c = col(S.x);
@@ -248,44 +271,76 @@
       <p class="hint">${best ? `Biggest gap: <b>${esc(best.label)}</b>, where picks won ${pct(best.won - best.price)} more often than the price implied (${best.n} bets). ` : ""}A gap only matters if it survives the fee and a fresh sample. Check it in <b>Test a bet</b>, then split the dates.</p></div>`;
     wireLink(out, G);
   }
+  // Strongest links: split the current bet by every condition you could know in time, and rank the groups.
+  // (The error is floored at "one more win would have moved the average this much", so a group that never won can't look infinitely strong.)
+  let SCAN = [];
+  function renderScan(rows) {
+    const B = bets(rows), out = $("view-scan");
+    if (!B.length) { out.innerHTML = `<div class="empty">No bets match these settings.</div>`; return; }
+    const used = new Set(S.filters.map((f) => f.key)), all = [];
+    for (const c of ds().cols) {
+      if (c.at > momentAt() || c.type === "date" || c.type === "text" || used.has(c.key)) continue;
+      for (const g of groups(B, c.key, 4)) if (g.n >= 40) all.push(Object.assign(g, { col: c, z: g.roi / Math.max((g.hi - g.lo) / 3.92, 1 / Math.max(0.02, g.price) / g.n) }));
+    }
+    SCAN = all.sort((a, b) => Math.abs(b.z) - Math.abs(a.z)).slice(0, 25);
+    const strong = all.filter((g) => Math.abs(g.z) > 1.96).length;
+    out.innerHTML = `<div style="display:grid;gap:14px">
+      <p class="headline">Which conditions change the result of betting <b>${esc(sideLabel())}</b> ${esc(momentLabel())}?</p>
+      <p class="compare">This split your ${B.length.toLocaleString()} bets ${all.length} different ways and ranked them. <b>${strong}</b> look stronger than luck usually allows; with ${all.length} tries you'd expect about <b>${Math.round(all.length * 0.05)}</b> to look that strong by luck alone. Trust a row more when it held in both halves, and re-test it on a random or later sample.</p>
+      <div class="tablewrap"><table><thead><tr><th>Only when…</th><th class="n">Bets</th><th class="n">Won</th><th class="n">Price implied</th><th class="n">Return</th><th class="n">Likely range</th><th>Both halves</th><th></th></tr></thead><tbody>
+      ${SCAN.map((g, i) => `<tr><td>${esc(g.col.label)}: <b>${esc(g.label)}</b></td><td class="n">${g.n}</td><td class="n">${(g.won * 100).toFixed(1)}%</td><td class="n">${(g.price * 100).toFixed(1)}%</td>
+        <td class="n ${g.roi >= 0 ? "pos" : "neg"}">${pct(g.roi)}</td><td class="n">${pct(g.lo, 0)} to ${pct(g.hi, 0)}</td>
+        <td>${g.r1 > 0 && g.r2 > 0 ? '<span class="pos">Won both</span>' : g.r1 < 0 && g.r2 < 0 ? '<span class="neg">Lost both</span>' : "Mixed"}</td>
+        <td><button class="btn" data-scan="${i}">Add</button></td></tr>`).join("") || `<tr><td colspan="8" class="empty">No group has 40 or more bets. Widen the sample.</td></tr>`}
+      </tbody></table></div>
+      <p class="hint">“Add” puts that condition on your bet so you can see the profit curve in <b>Test a bet</b>. Only conditions you would know at the moment you bet are tried.</p></div>`;
+  }
   function render() {
+    if (ds().ensure && !ds().ensure(render)) { syncControls(); $("samplenote").textContent = "Loading price paths…";
+      $(S.tab === "link" ? "linkout" : "view-" + S.tab).innerHTML = `<div class="empty">Loading price paths…</div>`; return; }
     syncControls();
     const rows = sample();
     const all = ds().rows.length;
     $("samplenote").textContent = `${rows.length.toLocaleString()} of ${all.toLocaleString()} ${ds().unit} in the sample.`;
-    if (S.tab === "bet") renderBet(rows); else renderLink(rows);
+    if (S.tab === "bet") renderBet(rows); else if (S.tab === "link") renderLink(rows); else renderScan(rows);
   }
 
   // ---------------------------------------------------------------- events
   document.addEventListener("click", (e) => {
     const t = e.target.closest("button"); if (!t) return;
-    if (t.dataset.ds) { Object.assign(S, { ds: t.dataset.ds, moment: null, side: null, filters: [], from: "", to: "", x: null, preset: null, pmin: 1, pmax: 99 }); render(); }
+    if (t.dataset.ds) { Object.assign(S, { ds: t.dataset.ds, moment: null, side: null, filters: [], from: "", to: "", x: null, preset: null, pmin: 1, pmax: 99, params: {}, exit: {} }); render(); }
+    else if (t.dataset.lg) { const on = ds().on; on[t.dataset.lg] = !on[t.dataset.lg]; if (!Object.values(on).some(Boolean)) on[t.dataset.lg] = true; S.from = S.to = ""; render(); }
+    else if (t.id === "allleagues") { const d = ds(), all = d.leagues.every((l) => d.on[l]); d.leagues.forEach((l) => (d.on[l] = !all)); if (all) d.on[d.leagues[0]] = true; S.from = S.to = ""; render(); }
+    else if (t.dataset.scan != null) { const f = SCAN[+t.dataset.scan].f; S.filters.push(Object.assign({}, f)); S.preset = null; S.tab = "bet"; render(); }
     else if (t.dataset.rm != null) { S.filters.splice(+t.dataset.rm, 1); S.preset = null; render(); }
     else if (t.id === "addfilter") { const c = ds().cols.find((c) => c.at <= momentAt() && c.type !== "date"); S.filters.push({ key: c.key }); render(); }
     else if (t.id === "reshuffle") { S.seed++; render(); }
-    else if (t.id === "scratch") { Object.assign(S, { moment: null, side: null, filters: [], from: "", to: "", take: "all", pmin: 1, pmax: 99, preset: null, tab: "bet" }); render(); }
-    else if (t.id === "tab-bet" || t.id === "tab-link") { S.tab = t.id.slice(4); render(); }
+    else if (t.id === "scratch") { Object.assign(S, { moment: null, side: null, filters: [], from: "", to: "", take: "all", pmin: 1, pmax: 99, preset: null, tab: "bet", params: {}, exit: {} }); render(); }
+    else if (t.id === "tab-bet" || t.id === "tab-link" || t.id === "tab-scan") { S.tab = t.id.slice(4); render(); }
   });
   document.addEventListener("change", (e) => {
     const t = e.target;
+    if (t.dataset.p) { S.params[t.dataset.p] = t.type === "number" ? Math.min(+t.max, Math.max(+t.min, +t.value || 0)) : t.value; S.preset = null; render(); return; }
+    if (t.id.startsWith("exit-")) { S.exit[t.id.slice(5)] = t.value === "" ? null : Math.max(0, +t.value); S.preset = null; render(); return; }
     if (t.dataset.i != null) {
       const f = S.filters[+t.dataset.i];
-      if (t.dataset.f === "key") { S.filters[+t.dataset.i] = { key: t.value }; const c = col(t.value); if (c.type === "bool") S.filters[+t.dataset.i].val = true; if (c.type === "cat") S.filters[+t.dataset.i].val = catValues(c.key)[0]; }
+      if (t.dataset.f === "key") { S.filters[+t.dataset.i] = { key: t.value }; const c = col(t.value); if (c.type === "bool") S.filters[+t.dataset.i].val = true; if (c.type === "text") S.filters[+t.dataset.i].val = ""; if (c.type === "cat") S.filters[+t.dataset.i].val = catValues(c.key)[0]; }
       else f[t.dataset.f] = t.value;
       S.preset = null; render(); return;
     }
     const map = { from: "from", to: "to", take: "take", moment: "moment", side: "side", xcol: "x", bins: "bins" };
-    if (map[t.id]) { S[map[t.id]] = t.value; if (t.id === "moment") S.filters = S.filters.filter((f) => (col(f.key) || {}).at <= momentAt()); if (!["xcol", "bins"].includes(t.id)) S.preset = null; render(); }
+    if (map[t.id]) { S[map[t.id]] = t.value; if (t.id === "moment") { S.params = {}; S.filters = S.filters.filter((f) => (col(f.key) || {}).at <= momentAt()); } if (!["xcol", "bins"].includes(t.id)) S.preset = null; render(); }
     else if (t.id === "n") { S.n = Math.max(10, +t.value || 1000); render(); }
     else if (t.id === "pmin" || t.id === "pmax") { S[t.id] = Math.min(99, Math.max(1, +t.value || (t.id === "pmin" ? 1 : 99))); S.preset = null; render(); }
     else if (t.id === "preset" && t.value !== "") {
       const p = PRESETS[+t.value];
       Object.assign(S, { ds: p.ds, moment: p.moment, side: p.side, pmin: p.pmin || 1, pmax: p.pmax || 99, from: p.from || "", to: p.to || "",
-                         take: "all", filters: p.filters.map((f) => Object.assign({}, f)), preset: +t.value, tab: "bet", x: null });
+                         take: "all", filters: p.filters.map((f) => Object.assign({}, f)), preset: +t.value, tab: "bet", x: null,
+                         params: Object.assign({}, p.params), exit: Object.assign({}, p.exit) });
       render();
     }
   });
-  $("built").textContent = `Data built ${window.EDGE_DATA.built}.`;
+  $("built").textContent = `Tennis and NBA score data built ${window.EDGE_DATA.built}` + (window.EDGE_SPORTS_INDEX ? `; all-sports price paths built ${window.EDGE_SPORTS_INDEX.built}.` : ".");
   const start = PRESETS.findIndex((p) => p.label === "Bet against set-1 winner at −233 to −400");
   const p = PRESETS[start];
   Object.assign(S, { ds: p.ds, moment: p.moment, side: p.side, filters: p.filters.map((f) => Object.assign({}, f)), preset: start });
