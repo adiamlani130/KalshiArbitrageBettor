@@ -1,4 +1,4 @@
-"""The Edge Lab's betting engine in Python: the same rules as app/paths.js, so results can be
+"""The ArbLab's betting engine in Python: the same rules as app/paths.js, so results can be
 checked outside the browser and swept in bulk (see discover.py). Reads the published data in app/data/.
 
 A game is a dict: date, league, names, fav (0/1), win (0/1, or -1 for a draw), step (minutes per sample),

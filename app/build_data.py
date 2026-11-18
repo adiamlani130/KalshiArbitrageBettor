@@ -1,4 +1,4 @@
-"""Build the Edge Lab's data file (app/data.js) from the raw CSVs in data/.
+"""Build the ArbLab's data file (app/data.js) from the raw CSVs in data/.
 Run from the repo root after scripts/pull_data.py:   python app/build_data.py
 
 Three tables, one row per thing you could bet on:

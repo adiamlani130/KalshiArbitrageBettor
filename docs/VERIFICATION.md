@@ -48,9 +48,9 @@ The fresh pull is bigger because the original Colab run couldn't read the price 
 
 ## Small issues found in the original code
 
-- **Leader bets were priced at the bid.** `nba_analysis.py` prices "bet the leader" as 1 − the trailer's ask, which is the leader's bid, 1–2¢ cheaper than what you'd actually pay. At the real ask the +900 to +3200 strategy returns +2.2% instead of +3.4%. The script is left unchanged so the original numbers reproduce; the Edge Lab uses the real ask.
-- **Playoff games.** `nba_analysis.py` finds playoff games by Kalshi titles that start with "Game" (77 in the fresh pull). The Edge Lab uses ESPN's playoff flag (81 games), so its playoff numbers differ slightly.
-- **Best-of-5 dates.** Matches during Grand Slam dates are all treated as best-of-5, including Slam qualifying, which is best-of-3. The Edge Lab keeps the same rule so its numbers match the scripts.
+- **Leader bets were priced at the bid.** `nba_analysis.py` prices "bet the leader" as 1 − the trailer's ask, which is the leader's bid, 1–2¢ cheaper than what you'd actually pay. At the real ask the +900 to +3200 strategy returns +2.2% instead of +3.4%. The script is left unchanged so the original numbers reproduce; the ArbLab uses the real ask.
+- **Playoff games.** `nba_analysis.py` finds playoff games by Kalshi titles that start with "Game" (77 in the fresh pull). The ArbLab uses ESPN's playoff flag (81 games), so its playoff numbers differ slightly.
+- **Best-of-5 dates.** Matches during Grand Slam dates are all treated as best-of-5, including Slam qualifying, which is best-of-3. The ArbLab keeps the same rule so its numbers match the scripts.
 
 ## How to re-check
 

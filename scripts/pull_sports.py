@@ -1,5 +1,5 @@
 """Pull game-winner price paths for many sports from Kalshi's public API (no key needed)
-and write the compact per-league files the Edge Lab loads on demand.
+and write the compact per-league files the ArbLab loads on demand.
 
     python scripts/pull_sports.py                 # every league below (1-2 hours, resumable)
     python scripts/pull_sports.py nfl mlb         # just some leagues

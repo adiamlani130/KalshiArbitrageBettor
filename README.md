@@ -1,4 +1,6 @@
-# Do popular sports-betting trends beat Kalshi's prediction markets?
+# ArbLab
+
+**Do popular sports-betting trends, and prediction markets themselves, leave money on the table?**
 
 **Author:** Adi Amlani, University of Florida (Finance & Mathematics)
 
@@ -10,7 +12,7 @@ This project tests well-known sports "trends" against real Kalshi prediction-mar
 
 **Short answer:** no simple rule reliably beats the market after fees. The one pattern that shows up everywhere is the **favorite-longshot bias**: long shots (big comebacks, big underdogs) are overpriced, while heavy favorites are priced about right.
 
-**Try it yourself:** the [Kalshi Edge Lab](https://adiamlani130.github.io/KalshiArbitrageBettor/) runs in the browser with nothing to install.
+**Try it yourself:** the [ArbLab](https://adiamlani130.github.io/KalshiArbitrageBettor/) runs in the browser with nothing to install.
 
 | Page | What it's for |
 |---|---|
@@ -54,9 +56,9 @@ The "bet against the set-1 winner" edge is the main methods lesson. It made mone
 | Bet every pre-game favorite | 1,307 | 69.0% | −223 | −$554 | −4.2% |
 | Playoffs: bet the underdog | 77 | 41.6% | +203 | +$183 | +23.8% |
 
-\* The analysis script prices the leader at its bid. Buying at the real ask, as the Edge Lab does, gives **+2.2%**.
+\* The analysis script prices the leader at its bid. Buying at the real ask, as the ArbLab does, gives **+2.2%**.
 
-The two positive NBA results have small samples: 161 and 77 bets. The Edge Lab's "likely range" for each includes zero, so neither is proven.
+The two positive NBA results have small samples: 161 and 77 bets. The ArbLab's "likely range" for each includes zero, so neither is proven.
 
 Full tables (35+ strategies, including back-to-backs, runs and line movement) are in `results/`.
 
@@ -155,9 +157,9 @@ python analysis/nba_build.py
 python analysis/nba_analysis.py
 ```
 
-Add `data/original_run results/original_run` to each command to reproduce the original Colab numbers instead. To pull fresh data (about 45 minutes, no API key needed), run `python scripts/pull_data.py`, then `python app/build_data.py` to rebuild the Edge Lab's data.
+Add `data/original_run results/original_run` to each command to reproduce the original Colab numbers instead. To pull fresh data (about 45 minutes, no API key needed), run `python scripts/pull_data.py`, then `python app/build_data.py` to rebuild the ArbLab's data.
 
-To open the Edge Lab locally, run `python -m http.server --directory app` and go to http://localhost:8000.
+To open the ArbLab locally, run `python -m http.server --directory app` and go to http://localhost:8000.
 
 To refresh the newer data and rerun every search (no API keys needed), in this order:
 
@@ -215,7 +217,7 @@ The rest cover the fee and profit math, trigger rules, empty order books, the ti
 
 ## Repo layout
 
-- `app/` - the Kalshi Edge Lab website
+- `app/` - the ArbLab website
   - `index.html` (home), `sports.html` (strategy builder), `research.html` (case studies), `stocks.html` (markets vs stocks), `strategies.html` (strategies & hedging), `findings.html` (strategy search)
   - `nav.js` (the one navigation bar; add a page there), `lab.js` (the sports engine and UI), `paths.js` (the 14-league dataset), `datasets.js` (the case-study datasets), `stocks.js`, `strategies.js`, `style.css`
   - `data/` - league price paths (loaded on demand), stocks and target-market data, search results, homepage data
@@ -227,14 +229,14 @@ The rest cover the fee and profit math, trigger rules, empty order books, the ti
 - `results/` - output tables and search results (`original_run/` holds the original results)
 - `docs/` - the write-up, the verification report and the leakage audit
 - `colab/` - one-click notebook that re-runs the original results, plus the original Colab notebook
-- `index.html` - sends the website's main link to the Edge Lab
+- `index.html` - sends the website's main link to the ArbLab
 
 ## Caveats
 
 - Samples are one season (NBA) and about 9 months (tennis). Promising leads need future data to confirm.
-- Pre-match and game-start times are estimated from trading-volume spikes, so they can be off by a few minutes. Set lengths in the Edge Lab are estimates for the same reason.
+- Pre-match and game-start times are estimated from trading-volume spikes, so they can be off by a few minutes. Set lengths in the ArbLab are estimates for the same reason.
 - Grand Slam (best-of-5) matches are identified by tournament dates.
-- "Before the match" tennis prices in the Edge Lab are midpoints plus 1¢, because only midpoints were saved for that moment.
+- "Before the match" tennis prices in the ArbLab are midpoints plus 1¢, because only midpoints were saved for that moment.
 - *All sports · price paths* has prices but no scores. A falling price is the market's read of the score, not the score itself. Tennis and UFC start times are estimated from the burst in trading, so "before the start" prices for those two can be a few minutes off.
 - In-game bets fill at the ask one sample (1–2 minutes) after the rule is first seen. Faster traders would get better prices; slower ones worse.
 - The stocks page tests hundreds of market-stock pairs, so some look strong by luck. The scanner says how many. Stock trades assume you get the opening price and pay the cost you set; real fills, borrow costs for shorts and taxes are not modelled.

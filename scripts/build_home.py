@@ -54,12 +54,33 @@ def tape():
         if per[m["k"]] <= 2: keep.append({k: v for k, v in m.items() if k != "k"})
     return keep[:28], D["dates"][-1]
 
+def chips():
+    """Real market questions and prices for the homepage's flashing side columns."""
+    import re
+    out = []
+    D = js("stocks.js") or {}
+    for s in D.get("signals", []):
+        p = [v for v in s["p"] if v is not None]
+        if not p: continue
+        t = re.sub(r"\s+", " ", s["title"].split(" — ")[0]).strip().upper()
+        if len(t) > 58: t = t[:58].rsplit(" ", 1)[0]
+        out.append([t, round(p[-1])])
+    idx = E.index()
+    for lg in idx["leagues"]:
+        for g in sorted(E.load(lg, idx), key=lambda g: -g["ts"])[:14]:
+            a, b = (g["names"][1], g["names"][0]) if g["home"] == 0 else g["names"]
+            out.append([f"{a} VS. {b}".upper()[:52], round((g["pre"][0][0] + g["pre"][0][1]) / 2)])
+    seen, keep = set(), []
+    for t, p in out:
+        if t not in seen: seen.add(t); keep.append([t, p])
+    return keep
+
 if __name__ == "__main__":
     F, V, idx = js("findings.js") or {}, js("evolved.js") or {}, E.index()
     S = js("stocks.js") or {}
     tests = sum(open(f).read().count("    def test_") for f in glob.glob(os.path.join(ROOT, "tests", "test_*.py")))
     t, asof = tape()
-    out = dict(built=time.strftime("%Y-%m-%d"), games=games(), tape=t, asof=asof,
+    out = dict(built=time.strftime("%Y-%m-%d"), games=games(), tape=t, asof=asof, chips=chips(),
                stats=dict(games=sum(l["n"] for l in idx["leagues"].values()), leagues=len(idx["leagues"]), markets=len(S.get("signals", [])),
                           stocks=len(S.get("px", {})), rules=(F.get("sports", {}).get("tested", 0) + V.get("funnel", {}).get("evaluated", 0)),
                           tests=tests, points=V.get("points", 0)),
