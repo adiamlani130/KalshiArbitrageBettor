@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Case Studies</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Backtest betting strategies in 14 sports against real Kalshi prediction-market prices, with fees included, and test how prediction markets line up with stocks.">
+<meta property="og:title" content="Kalshi Edge Lab">
+<meta property="og:description" content="Backtest betting strategies in 14 sports against real Kalshi prices, and test how prediction markets line up with stocks.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<body data-mode="research">
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">The original research · ATP tennis and the 2025–26 NBA season</span>
+    <h1>Case studies</h1>
+    <p class="lede">The three studies this project started with, rebuilt on a full data pull. Each pairs Kalshi prices with real scores. Load one of the strategies below, then change anything and see what happens.</p>
+    <div class="seg" id="dataset" role="group" aria-label="Dataset"></div>
+    <p class="hint" id="dsnote" hidden></p>
+  </header>
+  <section class="studies" aria-label="The three studies">
+    <div class="study"><span class="eyebrow">Tennis · ATP</span><h3>Does winning set 1 decide the match?</h3><span class="big">78.9%</span>
+      <p>Set-1 winners won 78.9% of 2,145 best-of-3 matches, not the 88% of the old stat, and Kalshi had already priced it in. Betting them lost 2.2%. Fading them at −233 to −400 made +3.9%, but only +22% in the months it was found and −19% in the months before.</p>
+      <button class="btn" data-study="Bet against set-1 winner at −233 to −400">Load this study</button></div>
+    <div class="study"><span class="eyebrow">NBA · games</span><h3>Back the favorite who is losing at halftime?</h3><span class="big">+9.5%</span>
+      <p>Pre-game favorites down 10+ at halftime returned +9.5% on 161 games, and playoff underdogs +23.8% on 77. Both small samples whose likely range still includes zero. Every pre-game favorite lost 4.2%.</p>
+      <button class="btn" data-study="Favorite down 10+ at halftime: bet the favorite">Load this study</button></div>
+    <div class="study"><span class="eyebrow">NBA · big deficits</span><h3>Bet on the comeback?</h3><span class="big">−47.9%</span>
+      <p>Backing a team the first time it trails by 20 lost 47.9% over 624 games, and taking more threes made it worse. Long shots are overpriced: the favorite-longshot bias, the one pattern that shows up everywhere.</p>
+      <button class="btn" data-study="Bet the team down 20+">Load this study</button></div>
+  </section>
+
+  <div class="bench">
+    <aside class="rail">
+      <section class="panel">
+        <h3>Strategy</h3>
+        <p class="hint">Build any strategy with the boxes below: pick when you bet, who you bet on, a price range, and as many conditions as you like. Or load one from the original research and tweak it.</p>
+        <select id="preset" aria-label="Load a strategy from the original research"><option value="">Load a strategy from the research…</option></select>
+        <div class="row2"><button class="btn" id="scratch">Start from scratch</button><button class="btn" id="copylink">Copy link to this strategy</button></div>
+      </section>
+
+      <section class="panel" id="leaguebox" hidden>
+        <h3>Leagues</h3>
+        <div class="chips" id="leagues"></div>
+        <button class="btn" id="allleagues">All / just one</button>
+        <p class="hint">Each league's prices load the first time you switch it on.</p>
+      </section>
+
+      <section class="panel">
+        <h3>Sample</h3>
+        <div class="row2">
+          <label class="field"><span>From</span><input type="date" id="from"></label>
+          <label class="field"><span>To</span><input type="date" id="to"></label>
+        </div>
+        <div class="row2">
+          <label class="field"><span>Use</span>
+            <select id="take"><option value="all">Everything</option><option value="recent">Most recent</option><option value="random">Random</option></select></label>
+          <label class="field"><span id="nlabel">How many</span><input type="number" id="n" min="10" step="50" value="1000"></label>
+        </div>
+        <button class="btn" id="reshuffle" hidden>Draw a new random sample</button>
+        <p class="hint" id="samplenote"></p>
+      </section>
+
+      <section class="panel">
+        <h3>Your bet</h3>
+        <label class="field"><span>When you bet</span><select id="moment"></select></label>
+        <div class="row2" id="params" hidden></div>
+        <label class="field"><span>Who you bet on</span><select id="side"></select></label>
+        <div class="row2">
+          <label class="field"><span>Price at least (¢)</span><input type="number" id="pmin" min="1" max="99" value="1"></label>
+          <label class="field"><span>Price at most (¢)</span><input type="number" id="pmax" min="1" max="99" value="99"></label>
+        </div>
+        <p class="hint" id="oddsnote"></p>
+      </section>
+
+      <section class="panel" id="exitpanel" hidden>
+        <h3>Getting out early (optional)</h3>
+        <div class="row3">
+          <label class="field"><span>Sell at +¢</span><input type="number" id="exit-tp" min="0" max="98" placeholder="—"></label>
+          <label class="field"><span>Stop at −¢</span><input type="number" id="exit-sl" min="0" max="98" placeholder="—"></label>
+          <label class="field"><span>After min</span><input type="number" id="exit-tm" min="0" max="400" placeholder="—"></label>
+        </div>
+        <p class="hint">Leave blank to hold every bet to the final result. Selling early pays Kalshi's fee a second time and sells at the bid.</p>
+      </section>
+
+      <section class="panel">
+        <h3>Only when…</h3>
+        <div class="filters" id="filters"></div>
+        <button class="btn" id="addfilter">Add a condition</button>
+        <p class="hint">Conditions only use what you'd know at the moment you bet. To look at things that happen later, like how long set 2 lasted, use <b>Find a link</b>.</p>
+      </section>
+    </aside>
+
+    <main class="sheet">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-bet" aria-selected="true">Test a bet</button>
+        <button role="tab" id="tab-link" aria-selected="false">Find a link</button>
+        <button role="tab" id="tab-scan" aria-selected="false">Strongest links</button>
+        <button role="tab" id="tab-mine" aria-selected="false">My strategies</button>
+      </div>
+      <div id="view-bet"></div>
+      <div id="view-link" hidden>
+        <div class="row2" style="max-width:640px">
+          <label class="field"><span>Compare by</span><select id="xcol"></select></label>
+          <label class="field"><span>Groups</span><select id="bins"><option>3</option><option>4</option><option selected>5</option><option>6</option><option>8</option><option>10</option></select></label>
+        </div>
+        <div id="linkout"></div>
+      </div>
+      <div id="view-scan" hidden></div>
+      <div id="view-mine" hidden></div>
+    </main>
+  </div>
+
+  <footer>
+    <p><b>Where the data comes from.</b> Prices are 1-minute bid/ask candles from Kalshi's public API. The first three datasets add real scores: ATP set results (Jan–Sep 2026) and ESPN NBA play-by-play (2025–26 season). <b>All sports · price paths</b> is prices only, for 14 leagues since August 2025: the price before the game and every 1–2 minutes during it. Game start times come from Kalshi's schedule; tennis and UFC starts are estimated from the burst in trading.</p>
+    <p><b>How bets are priced.</b> You buy at the ask 1–5 minutes after the moment, $10 per bet, minus Kalshi's taker fee (7% × contracts × price × (1 − price), rounded up to the cent). "Before the match" tennis prices are the midpoint plus 1¢, because only midpoints were saved for that moment.</p>
+    <p>Research, not betting advice. Past prices don't guarantee future results, and small samples can look profitable by luck.</p>
+    <p id="built"></p>
+  </footer>
+</div>
+
+<script src="nav.js"></script>
+<script src="data.js"></script>
+<script src="datasets.js"></script>
+<script src="lab.js"></script>

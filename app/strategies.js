@@ -2,7 +2,7 @@
 (function () {
   const L = window.SLAB, T = window.TARGET_DATA; if (!L) return;
   const { D, S, N, esc, pct, pts, money, cls, mean, C, O, ret, dP, link, ranks, corr, sig, span, short, stats, lineChart, legend, tile, table, VIEWS } = L;
-  Object.assign(S, { optU: "spx", optKind: "all", optGap: 10, optSel: "", mTk: "WBD", mOffer: 31, mBreak: 15, mGap: 5, mHedge: 100,
+  Object.assign(S, { optU: "spx", optKind: "all", optGap: 10, optSel: "", mTk: "WBD", mOffer: 30, mBreak: 15, mGap: 5, mHedge: 100,
     bThr: 5, bK: 6, bHold: 3, bUni: "second", hWin: 60, rThr: 2, rHold: 3, rCost: 1, rScope: "one", nKind: "all" });
   L.setTabs([["opt", "Options vs Kalshi"], ["merger", "Merger spread"], ["basket", "Second-order basket"], ["hedge", "Hedge a stock"], ["reverse", "Stock first, then Kalshi"], ["prenews", "Bets before the news"]], "opt");
   S.after = () => { const p = document.getElementById("pairpanel"); if (p) p.hidden = S.tab === "opt" || S.tab === "prenews"; };
@@ -105,7 +105,7 @@
         ${lineChart([{ pts: rows.map((r) => [r.i, r.p]), color: "var(--accent)" }, { pts: rows.map((r) => [r.i, r.q]), color: "var(--ink)", w: 1.5 }], D.dates, { fmtL: (v) => v + "%", label: "Deal odds from Kalshi and from the stock" })}</div>
       <div><h3 style="margin-bottom:8px">Profit on $10,000 of stock</h3>${legend([["var(--good)", "With the Kalshi hedge"], ["var(--market)", "Stock only"]])}
         ${lineChart([{ pts: eq, color: "var(--good)" }, { pts: un, color: "var(--market)", dash: true }], D.dates, { zero: true, fmtL: money, label: "Hedged and unhedged profit" })}</div>
-      <p class="hint">The stock-implied chance is (price − break price) ÷ (offer − break price). It ignores the time value of waiting for the money, so the stock always looks a little less confident than it is. The offer and break prices are yours to set: they are assumptions, and the answer moves with them. One deal is a case study, not a backtest. The “No” hedge is sized so that, if the deal broke, its payout would cover that share of the stock's fall.</p></div>`;
+      <p class="hint">The stock-implied chance is (price − break price) ÷ (offer − break price). It ignores the time value of waiting for the money, so the stock always looks a little less confident than it is. The offer and break prices are yours to set, and the answer moves with them. The default offer is Paramount's $30 all-cash tender from December 2025, the figure known when the Kalshi market opened; using the $30.95 the stock finally reached would be hindsight. The $15 break price is an assumption. One deal is a case study, not a backtest. The “No” hedge is sized so that, if the deal broke, its payout would cover that share of the stock's fall.</p></div>`;
   }
 
   // ---------------------------------------------------------------- 3. second-order basket
@@ -189,10 +189,10 @@
   function revTrades(s, tk) {
     const out = [], H = Math.max(1, S.rHold | 0), cost = (+S.rCost || 0) / 100; let free = 0, seen = 0, agree = 0;
     for (let i = 1; i < N - 1; i++) {
-      const r = ret(tk, i), p = s.p[i];
+      const r = ret(tk, i), p = s.q ? s.q[i] : null;      // 5pm price: you can only act after seeing the 4pm close
       if (r != null && p != null && Math.abs(r) * 100 >= S.rThr && i >= free && seen >= 20 && agree && p >= 5 && p <= 95) {
-        let x = Math.min(N - 1, i + H); while (x > i && s.p[x] == null) x--;
-        if (x > i) { const yes = Math.sign(agree) * Math.sign(r) > 0, pe = Math.min(0.99, (yes ? p : 100 - p) / 100 + cost), q = Math.max(0.01, (yes ? s.p[x] : 100 - s.p[x]) / 100 - cost);
+        let x = Math.min(N - 1, i + H); while (x > i && s.q[x] == null) x--;
+        if (x > i) { const yes = Math.sign(agree) * Math.sign(r) > 0, pe = Math.min(0.99, (yes ? p : 100 - p) / 100 + cost), q = Math.max(0.01, (yes ? s.q[x] : 100 - s.q[x]) / 100 - cost);
           out.push({ i, e: i, x, tk, sig: s, mv: r, yes, pe, q, r: kpnl(pe, q, true) / STAKE }); free = x + 1; }
       }
       const d1 = dP(s, i + 1), r0 = r; if (d1 != null && r0 != null && d1 && r0) { seen++; agree += Math.sign(d1) * Math.sign(r0); }   // did Kalshi follow the stock a day later?
@@ -207,13 +207,13 @@
     if (!st) return ctl + `<div class="empty">No trades. The rule needs 20 earlier days to learn which way Kalshi follows the stock; try a smaller stock move or apply it to the whole theme.</div>`;
     const cl = S.rScope === "one" ? st : byDay(Tr);
     return `<div style="display:grid;gap:16px">${ctl}
-      <p class="headline">The stocks page found stocks leading Kalshi more often than the reverse. This trades that: when ${S.rScope === "all" ? "a linked stock" : esc(S.tk)} moves ${S.rThr}%+ in a day, buy the Kalshi “Yes” or “No” at 4pm in the direction Kalshi has tended to follow, and sell ${S.rHold} day${S.rHold > 1 ? "s" : ""} later. <b>${st.n}</b> trades averaged <b class="${cls(st.m)}">${pct(st.m, 1)}</b> per $10 after Kalshi's fee both ways and a ${S.rCost}¢ spread.</p>
+      <p class="headline">The stocks page found stocks leading Kalshi more often than the reverse. This trades that: when ${S.rScope === "all" ? "a linked stock" : esc(S.tk)} moves ${S.rThr}%+ in a day, buy the Kalshi “Yes” or “No” at 5pm, an hour after the close, in the direction Kalshi has tended to follow, and sell ${S.rHold} day${S.rHold > 1 ? "s" : ""} later. <b>${st.n}</b> trades averaged <b class="${cls(st.m)}">${pct(st.m, 1)}</b> per $10 after Kalshi's fee both ways and a ${S.rCost}¢ spread.</p>
       <div class="tiles">${tile("Trades", st.n)}${tile("Made money", (st.win * 100).toFixed(0) + "%")}${tile("Average", pct(st.m, 1), cls(st.m))}${tile("Total on $10 each", money(st.total * STAKE), cls(st.total))}${tile("t-stat", cl.t.toFixed(1))}${tile("Halves", `${pct(cl.r1, 1)} / ${pct(cl.r2, 1)}`)}</div>
       <div class="pills">${verdict(cl)}</div>
       <div><h3 style="margin-bottom:8px">Running profit, $10 per trade</h3>${curve(Tr.map((t) => t.r * STAKE), Tr.map((t) => D.dates[t.e]))}</div>
       ${table([["Day"], ["Market"], ["Stock"], ["Stock move", "n"], ["Bought"], ["Paid", "n"], ["Sold", "n"], ["Result", "n"]],
         [...Tr].reverse().slice(0, 80).map((t) => `<tr><td>${D.dates[t.i]}</td><td class="wrap">${esc(short(t.sig.title, 50))}</td><td>${t.tk}</td><td class="n ${cls(t.mv)}">${pct(t.mv, 1)}</td><td>${t.yes ? "Yes" : "No"}</td><td class="n">${Math.round(t.pe * 100)}¢</td><td class="n">${Math.round(t.q * 100)}¢</td><td class="n ${cls(t.r)}">${pct(t.r, 0)}</td></tr>`))}
-      <p class="hint">Kalshi's price is read at 4:00pm New York time, the same moment the stock's daily move is known, so this assumes you can trade the contract within minutes of the close.</p></div>`;
+      <p class="hint">The stock's move is known at the 4:00pm close; the contract is bought and sold at its 5:00pm price, an hour later, so the trade never uses a price from before the signal.</p></div>`;
   }
 
   // ---------------------------------------------------------------- 6. bets before the news
@@ -232,6 +232,7 @@
       <p class="hint">Returns are per $10 bet at the evening price plus 1¢, held through the release, after Kalshi's fee. Thresholds within one release win or lose together, so the number of independent results is the number of releases (about ${new Set(rows.map((r) => r[0] + r[1])).size}), not the number of markets.</p></div>`;
   }
 
+  window.STRAT_TEST = { model, basketTrades, hedgeRun, revTrades };   // used by tests/test_markets.py
   Object.assign(VIEWS, { opt: viewOpt, merger: viewMerger, basket: viewBasket, hedge: viewHedge, reverse: viewReverse, prenews: viewPrenews });
   document.addEventListener("click", (e) => { const t = e.target.closest("[data-hsel]"); if (!t) return; const si = +t.dataset.hsel; S.sig = si; S.theme = D.signals[si].theme; L.render(); window.scrollTo({ top: 0 }); });
   if (new URLSearchParams(location.search).get("deal") !== "0") { const w = D.signals.findIndex((x) => x.id === "KXTAKEOVERACQWB-27JUN30-PSKY"); if (w >= 0 && D.px.WBD) { S.theme = "mergers"; S.sig = w; S.tk = "WBD"; } }

@@ -4,12 +4,17 @@
 (function () {
   const IDX = window.EDGE_SPORTS_INDEX;
   if (!IDX) return;
+  window.DATASETS = window.DATASETS || {}; window.PRESETS = window.PRESETS || [];
   const CODE = {}; [...IDX.alphabet].forEach((ch, i) => (CODE[ch] = i));
   const loaded = {}, loading = {};
   const decode = (s) => { const a = new Float32Array(s.length); let last = NaN;
     for (let i = 0; i < s.length; i++) { const v = CODE[s[i]]; if (v !== undefined) last = v; a[i] = last; } return a; };
   // An empty order book (bid 0, ask 100) is not a price: keep the last real quote instead.
-  const clean = (bid, ask) => { for (let i = 1; i < bid.length; i++) if (!(ask[i] - bid[i] <= 30)) { bid[i] = bid[i - 1]; ask[i] = ask[i - 1]; } };
+  // An empty book (bid 0, ask 100) or a missing quote is not a price. Keep the last real quote for display and
+  // for spotting triggers, but mark the sample as not tradeable: a bet can only fill at a live two-sided quote.
+  const clean = (bid, ask) => { const live = new Uint8Array(bid.length);
+    for (let i = 0; i < bid.length; i++) { if (ask[i] - bid[i] <= 30) live[i] = 1; else if (i) { bid[i] = bid[i - 1]; ask[i] = ask[i - 1]; } }
+    return live; };
   const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const fmtET = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23", weekday: "short" });
   const STAGE = { REG: "Regular season", POST: "Playoffs", PRE: "Preseason" };
@@ -20,9 +25,9 @@
       const g = (k) => r[ix[k]];
       const parts = Object.fromEntries(fmtET.formatToParts(new Date(g("ts") * 1000)).map((p) => [p.type, p.value]));
       const three = meta.three, aB = decode(g("b")), aA = decode(g("a"));
-      clean(aB, aA);
+      const liveA = clean(aB, aA);
       const bB = three ? decode(g("Bb")) : aA.map((v) => 100 - v), bA = three ? decode(g("Ba")) : aB.map((v) => 100 - v);
-      if (three) clean(bB, bA);
+      const liveB = three ? clean(bB, bA) : liveA;
       // [bid, ask] for A and B at each pre-game moment (B = buying "No" on A when there are only two outcomes)
       const pair = (k) => { const a = g(k); if (!a) return null; const b = three ? g("B" + k) : [100 - a[1], 100 - a[0]]; return b ? [a, b] : null; };
       const pre = pair("pre"), mid = (p) => (p[0] + p[1]) / 2;
@@ -32,7 +37,7 @@
         weekday: DAYS.find((d) => d.startsWith(parts.weekday)), hour: +parts.hour, names: [g("A"), g("B")],
         match: home === 0 ? `${g("B")} @ ${g("A")}` : `${g("A")} vs ${g("B")}`, home, win: g("draw") ? -1 : g("won") ? 0 : 1,
         stage: STAGE[g("season")] || "Other / unknown", vol: g("vol"), pvol: g("pvol"), mins: g("mins"),
-        bid: [aB, bB], ask: [aA, bA], pre, open: pair("open"), h24: pair("h24"), h1: pair("h1"), fav: F, n: aA.length };
+        bid: [aB, bB], ask: [aA, bA], live: [liveA, liveB], pre, open: pair("open"), h24: pair("h24"), h1: pair("h1"), fav: F, n: aA.length };
       o.fav_pre = mid(pre[F]) / 100; o.fav_name = o.names[F]; o.dog_name = o.names[1 - F];
       if (home === 0) o.home_pre = mid(pre[0]) / 100;
       for (const [k, key] of [["open", "move_open"], ["h24", "move_24h"], ["h1", "move_1h"]]) if (o[k]) o[key] = (mid(pre[F]) - mid(o[k][F])) / 100;
@@ -67,8 +72,8 @@
   const watchP = { id: "w", label: "Watch", def: "fav", options: WATCH };
   const MOMENTS = [
     { id: "pre", label: "Just before the start", phrase: "just before the start", at: 0 },
-    { id: "h1", label: "1 hour before the start", phrase: "an hour before the start", at: 0 },
-    { id: "h24", label: "24 hours before the start", phrase: "a day before the start", at: 0 },
+    { id: "h1", label: "1 hour before the start", phrase: "an hour before the start", at: -1 },
+    { id: "h24", label: "24 hours before the start", phrase: "a day before the start", at: -1 },
     { id: "t", label: "A set time into the game", phrase: (p) => `${p.t} minutes into the game`, at: 1, params: [P("t", "Minutes after the start", 30, 2, 400)] },
     { id: "below", label: "When a team's price first falls to…", phrase: (p) => `the first time ${wl(p.w)} falls to ${p.x}¢ or less`, at: 1, trig: true, params: [watchP, X] },
     { id: "above", label: "When a team's price first rises to…", phrase: (p) => `the first time ${wl(p.w)} reaches ${p.x}¢ or more`, at: 1, trig: true, params: [watchP, Object.assign({}, X, { def: 80 })] },
@@ -105,6 +110,7 @@
   // ---------------------------------------------------------------- the bet
   const SIDES_FIXED = [{ id: "fav", label: "The pre-game favorite" }, { id: "dog", label: "The pre-game underdog" },
                        { id: "home", label: "The home team" }, { id: "away", label: "The away team" }];
+  const SIDES_EARLY = [{ id: "fav", label: "The favorite at that time" }, { id: "dog", label: "The underdog at that time" }].concat(SIDES_FIXED.slice(2));
   const SIDES_TRIG = [{ id: "trig", label: "The team that triggered it" }, { id: "other", label: "The other team" }].concat(SIDES_FIXED);
   const SIDES_T = [{ id: "leader", label: "Whoever is ahead on price" }, { id: "trailer", label: "Whoever is behind on price" }].concat(SIDES_FIXED);
   function pickSide(r, side, hit, i) {
@@ -116,15 +122,19 @@
   }
   function bet(r, moment, side, p, exit) {
     const mo = MOMENTS.find((m) => m.id === moment);
-    if (!mo.at) {   // before the game: one price, hold to the end
+    if (mo.at <= 0) {   // before the game: one price, hold to the end
       const q = r[moment]; if (!q) return null;
-      const s = pickSide(r, side, null, 0); if (s == null) return null;
-      return { p: q[s][1] / 100, won: r.win === s, pick: r.names[s], x: { pick_fav: s === r.fav, pick_home: r.home === 0 ? s === 0 : null, pick_pre: (r.pre[s][0] + r.pre[s][1]) / 200 } };
+      // "Favorite" means the favorite at the moment you bet. Using the closing line for an earlier bet would be peeking.
+      const favNow = q[0][0] + q[0][1] >= q[1][0] + q[1][1] ? 0 : 1;
+      const s = side === "fav" ? favNow : side === "dog" ? 1 - favNow : pickSide(r, side, null, 0); if (s == null) return null;
+      return { p: q[s][1] / 100, won: r.win === s, pick: r.names[s], x: { pick_fav: s === favNow, pick_home: r.home === 0 ? s === 0 : null, pick_pre: (r.pre[s][0] + r.pre[s][1]) / 200 } };
     }
     const hit = find(r, moment, p); if (!hit) return null;
-    const i = hit.i, e = i + 1;                     // see it at sample i, get filled one sample (1-2 minutes) later
-    if (e >= r.n) return null;
+    const i = hit.i;
     const s = pickSide(r, side, hit, i); if (s == null) return null;
+    // See it at sample i, fill at the first live quote 1-3 samples later (never at a stale or empty book).
+    let e = i + 1; while (e < r.n && e <= i + 3 && !r.live[s][e]) e++;
+    if (e >= r.n || e > i + 3) return null;
     const price = r.ask[s][e]; if (!(price >= 2 && price <= 98)) return null;
     let hi = 0, lo = 100, flips = 0, sd = 0;
     for (let j = 0; j <= i; j++) { const m = midAt(r, s, j); if (m > hi) hi = m; if (m < lo) lo = m;
@@ -142,6 +152,7 @@
     const tp = +exit.tp || 0, sl = +exit.sl || 0, tm = +exit.tm || 0;
     if (tp || sl || tm) {
       for (let j = e + 1; j < r.n - 1; j++) {
+        if (!r.live[s][j]) continue;                                                   // can only sell into a live bid
         const b = r.bid[s][j];
         if (tp && b >= price + tp) { out.sell = (price + tp) / 100; break; }       // a resting sell order at the target
         if (sl && b <= price - sl) { out.sell = Math.max(1, b) / 100; break; }      // stop: sold at whatever the bid was
@@ -152,13 +163,13 @@
   }
 
   const cols = [
-    { key: "date", label: "Date", type: "date", at: 0 },
-    { key: "league", label: "League", type: "cat", at: 0 },
-    { key: "sport", label: "Sport", type: "cat", at: 0 },
-    { key: "stage", label: "Season stage", type: "cat", at: 0 },
-    { key: "weekday", label: "Day of the week", type: "cat", at: 0 },
-    { key: "hour", label: "Start hour (US Eastern, 0-23)", type: "num", at: 0 },
-    { key: "match", label: "Team or player name contains", type: "text", at: 0 },
+    { key: "date", label: "Date", type: "date", at: -1 },
+    { key: "league", label: "League", type: "cat", at: -1 },
+    { key: "sport", label: "Sport", type: "cat", at: -1 },
+    { key: "stage", label: "Season stage", type: "cat", at: -1 },
+    { key: "weekday", label: "Day of the week", type: "cat", at: -1 },
+    { key: "hour", label: "Start hour (US Eastern, 0-23)", type: "num", at: -1 },
+    { key: "match", label: "Team or player name contains", type: "text", at: -1 },
     { key: "fav_name", label: "Favorite's name contains", type: "text", at: 0 },
     { key: "fav_pre", label: "Favorite's price just before the start", type: "num", at: 0, pct: true },
     { key: "home_pre", label: "Home team's price just before the start", type: "num", at: 0, pct: true },
@@ -166,8 +177,8 @@
     { key: "move_24h", label: "Favorite's price move in the last 24 hours", type: "num", at: 0, pct: true },
     { key: "move_open", label: "Favorite's price move since the market opened", type: "num", at: 0, pct: true },
     { key: "pvol", label: "Contracts traded before the start", type: "num", at: 0 },
-    { key: "pick_fav", label: "Your pick was the pre-game favorite", type: "bool", at: 0, dyn: true },
-    { key: "pick_home", label: "Your pick is the home team", type: "bool", at: 0, dyn: true },
+    { key: "pick_fav", label: "Your pick was the favorite when you bet (pre-game favorite for in-game bets)", type: "bool", at: -1, dyn: true },
+    { key: "pick_home", label: "Your pick is the home team", type: "bool", at: -1, dyn: true },
     { key: "pick_pre", label: "Your pick's price before the start", type: "num", at: 0, pct: true, dyn: true },
     { key: "elapsed", label: "Minutes into the game when you bet", type: "num", at: 1, dyn: true },
     { key: "pick_chg", label: "Your pick's price change since the start", type: "num", at: 1, pct: true, dyn: true },
@@ -191,7 +202,7 @@
   window.DATASETS.paths = {
     label: "All sports · price paths", unit: "games", cols, bet, moments: MOMENTS, defaultX: "fav_pre",
     get rows() { return this.leagues.filter((l) => this.on[l] && loaded[l]).flatMap((l) => loaded[l]); },
-    sidesFor: (m) => { const mo = MOMENTS.find((x) => x.id === m); return mo.trig ? SIDES_TRIG : mo.id === "t" ? SIDES_T : SIDES_FIXED; },
+    sidesFor: (m) => { const mo = MOMENTS.find((x) => x.id === m); return mo.trig ? SIDES_TRIG : mo.id === "t" ? SIDES_T : mo.at < 0 ? SIDES_EARLY : SIDES_FIXED; },
     sides: SIDES_FIXED, exits: true,
     leagues: Object.keys(IDX.leagues), meta: IDX.leagues, on: { nfl: true }, ensure(done) { return ensure(this.leagues.filter((l) => this.on[l]), done); },
     note: "Prices only: a team's price falling is the market's read of the score. Bets fill at the ask 1–2 minutes after the rule is first seen.",

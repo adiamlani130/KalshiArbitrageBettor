@@ -214,10 +214,11 @@ def build():
         if len(cs) < 48: continue
         T = [c[0] for c in cs]; P = [c[1] for c in cs]
         end = min(ts(m["close_time"]), T[-1] + 3600)
-        p = []
-        for t in close16:
+        def at(t):
             k = bisect_right(T, t) - 1
-            p.append(round(P[k] * 1000) / 10 if k >= 0 and T[0] <= t <= end and t - T[k] < 4 * 86400 else None)
+            return round(P[k] * 1000) / 10 if k >= 0 and T[0] <= t <= end and t - T[k] < 4 * 86400 else None
+        p = [at(t) for t in close16]                      # 4:00pm, the stock close
+        q = [at(t + 3600) for t in close16]               # 5:00pm: the first price you can trade after seeing the close
         vals = [v for v in p if v is not None]
         if len(vals) < 12 or max(vals) - min(vals) < 4: continue
         th = next(k for k, v in THEMES.items() if s in v[1].split())
@@ -226,17 +227,14 @@ def build():
         if sub and sub.lower() not in title.lower() and sub.lower() not in ("yes", "starts"): title += f" — {sub}"
         sid = len(signals)
         signals.append(dict(id=m["ticker"], title=title, theme=th, vol=round(fv(m)), result=m.get("result") or None,
-                            open=day(ts(m["open_time"])), close=day(ts(m["close_time"])), p=p))
-        # biggest one-hour jumps, kept at least 3 days apart
+                            open=day(ts(m["open_time"])), close=day(ts(m["close_time"])), p=p, q=q))
+        # One-hour jumps of 6+ points, taken in time order and at least 3 days apart. Every jump that meets the
+        # rule is kept: nothing is filtered on what the price did afterwards, which you could not know at the time.
         if sid >= 140: continue
-        jumps = sorted(((abs(P[i] - P[i - 1]), i) for i in range(1, len(P)) if T[i] - T[i - 1] <= 3600 and abs(P[i] - P[i - 1]) >= 0.06
-                        and 0.03 < P[i] < 0.97 and T[i] < end - 3600), reverse=True)
         used = []
-        for _, i in jumps:
-            if any(abs(T[i] - u) < 3 * 86400 for u in used) or len(used) >= 6: continue
-            # skip jumps that fully reverse within 2 hours (a stray quote, not news)
-            j = min(len(P) - 1, i + 2)
-            if abs(P[j] - P[i - 1]) < 0.5 * abs(P[i] - P[i - 1]): continue
+        for i in range(1, len(P)):
+            if not (T[i] - T[i - 1] <= 3600 and abs(P[i] - P[i - 1]) >= 0.06 and 0.03 < P[i] < 0.97 and T[i] < end - 3600): continue
+            if (used and T[i] - used[-1] < 3 * 86400) or len(used) >= 10: continue
             used.append(T[i])
             rec = dict(s=sid, t=T[i], d=datetime.fromtimestamp(T[i], ET).strftime("%Y-%m-%d %H:%M"),
                        p0=round(P[i - 1] * 100, 1), p1=round(P[i] * 100, 1), r={})

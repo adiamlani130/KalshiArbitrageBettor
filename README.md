@@ -10,10 +10,16 @@ This project tests well-known sports "trends" against real Kalshi prediction-mar
 
 **Short answer:** no simple rule reliably beats the market after fees. The one pattern that shows up everywhere is the **favorite-longshot bias**: long shots (big comebacks, big underdogs) are overpriced, while heavy favorites are priced about right.
 
-**Try it yourself:** the [Kalshi Edge Lab](https://adiamlani130.github.io/KalshiArbitrageBettor/) runs in the browser with nothing to install. It has three pages:
+**Try it yourself:** the [Kalshi Edge Lab](https://adiamlani130.github.io/KalshiArbitrageBettor/) runs in the browser with nothing to install.
 
-- **Sports lab.** Build any strategy: pick a sport, a sample (for example 1,000 random tennis matches), when to bet, who to bet on, a price range and any conditions, and see what it would have made. *All sports · price paths* covers 14 leagues (NFL, college football, NBA, WNBA, college basketball, MLB, NHL, four soccer leagues, UFC, ATP and WTA) and lets you bet on what the price does during the game. See [What you can test](#what-you-can-test).
-- **Markets vs stocks.** Lines up Kalshi probabilities (Fed decisions, tariffs, shutdowns, elections, Tesla, bitcoin and more) with about 100 stocks and ETFs, to test whether the prediction market moves before the stock does.
+| Page | What it's for |
+|---|---|
+| [Home](https://adiamlani130.github.io/KalshiArbitrageBettor/app/) | What the lab is, real games replayed price by price, and the headline results |
+| [Strategy builder](https://adiamlani130.github.io/KalshiArbitrageBettor/app/sports.html) | Build and test any betting rule on 16,834 games across 14 leagues. Every strategy is a shareable link; save strategies and compare them side by side; sweep a threshold to check it isn't luck |
+| [Case studies](https://adiamlani130.github.io/KalshiArbitrageBettor/app/research.html) | The three original studies (tennis set 1, NBA halftime favorites, NBA comebacks) with real scores, ready to load and tweak |
+| [Markets vs stocks](https://adiamlani130.github.io/KalshiArbitrageBettor/app/stocks.html) | 336 Kalshi markets against 242 stocks and ETFs: who moves first, lag trades, hourly shocks, announcements, earnings calls |
+| [Strategies & hedging](https://adiamlani130.github.io/KalshiArbitrageBettor/app/strategies.html) | Kalshi vs options-implied odds, merger spreads, second-order baskets, hedging a stock with a contract |
+| [Strategy search](https://adiamlani130.github.io/KalshiArbitrageBettor/app/findings.html) | What survived when a genetic algorithm, NEAT neural networks, a gradient-boosted model and a grid search hunted for strategies, judged on games they never saw |
 
 ## Key results
 
@@ -54,11 +60,39 @@ The two positive NBA results have small samples: 161 and 77 bets. The Edge Lab's
 
 Full tables (35+ strategies, including back-to-backs, runs and line movement) are in `results/`.
 
-- **Strategies & hedging.** Six less obvious tests: Kalshi against options-implied odds, a merger spread against Kalshi's deal odds, baskets of second-order stocks, hedging a stock with a contract, trading the contract after the stock moves, and betting the ladder before macro news.
+## What survived out of sample
+
+Two searches hunted for betting strategies, and both judged every idea on games it was never fitted to. Neither found one that holds up. That is the headline result: after fees, Kalshi's sports prices are hard to beat with any rule built from prices alone.
+
+**Machine search** (`analysis/evolve.py`). Every game becomes a set of decision points: an hour before the start, just before it, and every 10 minutes during it (5 for UFC), for each side. That gives 471,196 moments in 16,834 games, each carrying only what was known then and the price you'd actually pay. Games are split by date: the first 55% to search, the next 20% to choose ("validation"), and the last 25% held back and used once ("test").
+
+| Method | What it tried | Result on games it never saw |
+|---|---|---|
+| Genetic algorithm | 113,916 readable rules, evolved over 6 islands × 80 generations | 5,734 were clearly profitable on the search games; 0 still were on validation; 0 confirmed on the test |
+| NEAT neural networks | 20,000 evolved networks deciding moment by moment | Best on validation: +2.4% on search games, +1.3% on validation, +0.4% on the test (280 bets) |
+| Gradient boosting | A model predicting who wins, betting when it disagrees with the price | Forecast error 0.1717 vs Kalshi's own price 0.1684 (lower is better); its bets returned −6.8% on the test |
+
+**Grid search** (`analysis/discover.py`). A fixed grid of 1,626 rules, each found on the first 60% of a league's games and tested once on the last 40% with a 10% false-discovery rate.
+
+| | Tried | Looked good in the search period | Held up on held-back data |
+|---|---:|---:|---:|
+| Sports betting rules | 1,626 | 8 (luck alone gives about 37) | 0 |
+| Rules that lose in both periods | 1,626 | | 119 |
+| Kalshi and a stock moving on the same day | 2,621 | 190 (luck: 7) | 136 |
+| Kalshi leading the stock by a day | 2,621 | 15 | 0 |
+| The stock leading Kalshi by a day | 2,606 | 13 | 0 |
+
+- **Overfitting is easy to see.** Thousands of rules look profitable on the search games and none carry over. An earlier, smaller NEAT run's best network made +18.3% on the games it evolved on and −16.3% on the test; in the full run the best network broke even (+0.4% on 280 test bets).
+- **The market forecasts better than the model.** Trained on the same information a bettor has, a gradient-boosted model was a worse forecaster of who wins than the Kalshi price.
+- **Losing is repeatable.** Backing whoever is behind on price an hour into a game lost 12.9% in the search period and 16.1% on 5,936 held-back bets across all 14 leagues. Long shots are overpriced in every sport.
+- **Prediction markets and stocks move together, and neither leads.** Same-day links replicate; next-day leads in either direction do not.
+- **Two "edges" were leaks, and the tests caught them.** An earlier run showed tennis favorites bought an hour early earning 10–15% (the favorite was taken from the closing line), and a WTA rule that "held up" out of sample (+13.5% on 177 matches). The second came from tennis start times estimated with the whole match's trading volume. With both fixed and the tennis data re-pulled, both vanish. [docs/LEAKAGE.md](docs/LEAKAGE.md) has the full audit.
 
 ## What you can test
 
-### Sports lab
+### Sports: strategy builder and case studies
+
+The *strategy builder* uses the all-sports price paths; the *case studies* page holds the three original datasets with real scores.
 
 | | Tennis · ATP | NBA · games | NBA · big deficits | All sports · price paths |
 |---|---|---|---|---|
@@ -70,11 +104,14 @@ Price triggers in *All sports* are things like "the first time the favorite fall
 
 You can then add conditions (league, day of week, start hour, pre-game price, how the line moved in the last hour or day, pre-game volume, minutes into the game, how far the pick is off its high, lead changes so far, and more) and optionally **get out early**: sell at a target, at a stop, or after a set time, instead of holding to the result.
 
-Three tabs read the same bets:
+Four tabs read the same bets:
 
-- **Test a bet** - profit, win rate, a likely range, and whether it held in both halves of the sample.
+- **Test a bet** - profit, win rate, a likely range, and whether it held in both halves of the sample. For trigger rules, one click reruns the strategy at every nearby threshold, so you can tell a smooth edge from a lucky spike.
 - **Find a link** - win rate against the price-implied chance, split by any column.
 - **Strongest links** - splits the bet by every condition you could have known in time, ranks the groups, and says how many would look that strong by luck.
+- **My strategies** - save strategies in your browser and compare them side by side on the same games.
+
+Every strategy lives in the page's link, so copying the address (or the *Copy link* button) shares exactly what you built.
 
 ### Markets vs stocks
 
@@ -122,12 +159,16 @@ Add `data/original_run results/original_run` to each command to reproduce the or
 
 To open the Edge Lab locally, run `python -m http.server --directory app` and go to http://localhost:8000.
 
-To refresh the newer data (no API keys needed):
+To refresh the newer data and rerun every search (no API keys needed), in this order:
 
 ```bash
+pip install numpy scikit-learn neat-python
 python scripts/pull_sports.py     # 14 leagues of in-game price paths from Kalshi (1-2 hours, resumable)
 python scripts/pull_stocks.py     # Kalshi probabilities + Yahoo Finance prices (about 15 minutes)
 python scripts/pull_targets.py    # price-target markets + volatility indexes for the Strategies page
+python analysis/discover.py       # grid search with a held-back test (about 30 seconds)
+python analysis/evolve.py         # genetic algorithm, NEAT and gradient boosting (about 15 minutes)
+python scripts/build_home.py      # homepage data
 ```
 
 ### Paper trading the lag trade
@@ -142,20 +183,51 @@ python scripts/alpaca_paper.py signal.json --trade    # places the paper order
 
 It reads Kalshi's live probability, checks whether it moved enough while the stock hasn't, places the order, and closes the position after the holding period the next time you run it. It only talks to Alpaca's paper endpoint. It has been checked against live Kalshi data but not against an Alpaca account, so start with the dry run.
 
+## Changing things
+
+| To... | Edit |
+|---|---|
+| Add or rename a page in the menu | `PAGES` at the top of `app/nav.js` |
+| Add an example strategy to the builder | `window.PRESETS.push(...)` at the bottom of `app/paths.js` (case studies: `app/datasets.js`) |
+| Add a condition you can filter on | `cols` in `app/paths.js`: a column with `at: -1` is known before the game, `0` at the start, `1` in-game, `9` only afterwards (shown in *Find a link*, never usable as a condition) |
+| Add a new kind of bet timing | `MOMENTS` and `find()` in `app/paths.js`, and the same in `analysis/engine.py` (a test checks the two agree) |
+| Add a league | `LEAGUES` in `scripts/pull_sports.py`, then `python scripts/pull_sports.py <league>` |
+| Add a Kalshi theme or stocks | `THEMES` in `scripts/pull_stocks.py`, then rerun it |
+| Change what the machine search tries | `WINDOWS`, `COND_FEATS` and the island sizes in `analysis/evolve.py` |
+| Change colors or fonts | the variables at the top of `app/style.css` (light and dark) |
+
+After any change, run `python -m unittest discover tests`; the leakage tests will fail if a new rule or column looks at the future.
+
+## Tests
+
+```bash
+pip install numpy
+python -m unittest discover tests
+```
+
+28 checks run on every push (GitHub Actions). The most important ones look for **leakage**, a strategy using information it couldn't have had yet. They change the future and confirm the past doesn't change:
+
+- **Sports engine:** 500+ bets on random price paths; every price after the fill is rewritten and the result flipped, and no bet may change.
+- **Machine search:** 125 real games; every quote after a random moment is scrambled, and every decision point up to that moment must stay identical.
+- **Markets pages:** the real `stocks.js` and `strategies.js` run in Node. Every price after a cutoff day is scrambled, and 25,000+ lag trades, stock-first trades, baskets, hedges and options prices must not change. A deliberately leaky canary rule must change, proving the test can see a leak.
+
+The rest cover the fee and profit math, trigger rules, empty order books, the time splits, the false-discovery correction, the published data (files load, final prices agree with results, in-game prices are calibrated), and the browser and Python engines giving the same bets and profit. [docs/LEAKAGE.md](docs/LEAKAGE.md) lists every leak found and fixed.
+
 ## Repo layout
 
-- `app/` - the Kalshi Edge Lab: `index.html` (sports lab) and `stocks.html` (markets vs stocks); `build_data.py` builds the tennis and NBA score data
-- `app/data/` - the all-sports price paths (one file per league, loaded on demand) and the stocks data
-- `scripts/pull_sports.py`, `scripts/pull_stocks.py` - pull and build everything in `app/data/`
-- `scripts/alpaca_paper.py` - paper-trades a lag-trade rule through Alpaca
-- `index.html` - sends the website's main link straight to the Edge Lab
-- `colab/run_in_colab.ipynb` - one-click notebook that re-runs every result
-- `colab/` - also holds the original Colab notebook and the cleaned-up Colab data-pull scripts
-- `scripts/pull_data.py` - the same data pull as one script you can run anywhere
-- `analysis/` - analysis scripts; `common.py` holds the bet and fee math
-- `data/` - raw data from Kalshi and ESPN (`original_run/` is the first Colab pull)
-- `results/` - output tables (`original_run/` holds the original results)
-- `docs/` - the write-up and the verification report
+- `app/` - the Kalshi Edge Lab website
+  - `index.html` (home), `sports.html` (strategy builder), `research.html` (case studies), `stocks.html` (markets vs stocks), `strategies.html` (strategies & hedging), `findings.html` (strategy search)
+  - `nav.js` (the one navigation bar; add a page there), `lab.js` (the sports engine and UI), `paths.js` (the 14-league dataset), `datasets.js` (the case-study datasets), `stocks.js`, `strategies.js`, `style.css`
+  - `data/` - league price paths (loaded on demand), stocks and target-market data, search results, homepage data
+  - `build_data.py` - builds the case-study score data
+- `analysis/` - `engine.py` (the sports engine in Python), `discover.py` (grid search, held-back test), `evolve.py` (genetic algorithm, NEAT, gradient boosting), and the original study scripts; `common.py` holds the bet and fee math
+- `scripts/` - data pulls (`pull_sports.py`, `pull_stocks.py`, `pull_targets.py`, `pull_data.py`), `build_home.py`, and the Alpaca scripts (`alpaca_paper.py`, `options_binary.py`)
+- `tests/` - the test suite, including the Node harness for the markets pages
+- `data/` - raw data from Kalshi and ESPN (`original_run/` is the first Colab pull; `manual/` holds prices for delisted stocks)
+- `results/` - output tables and search results (`original_run/` holds the original results)
+- `docs/` - the write-up, the verification report and the leakage audit
+- `colab/` - one-click notebook that re-runs the original results, plus the original Colab notebook
+- `index.html` - sends the website's main link to the Edge Lab
 
 ## Caveats
 

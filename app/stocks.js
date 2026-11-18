@@ -145,10 +145,11 @@
         let sign = S.dir === "up" ? 1 : S.dir === "down" ? -1 : 0;
         if (!sign && seen >= 20) sign = Math.sign(agree);   // learned from earlier days only
         const want = sign * Math.sign(move);
-        const e = S.entry === "open" ? i + 1 : i, x = Math.min(N - 1, i + H), pe = S.entry === "open" ? o[e] : c[e];
-        if (want && pe != null && c[x] != null && x > (S.entry === "open" ? i : i) && !(S.gap !== "" && sr * want * 100 >= +S.gap)) {
+        // The signal is read at 4pm on day i, so the first price you can trade is the next day's open (or later).
+        const e = i + (S.entry === "open2" ? 2 : 1), x = Math.min(N - 1, e - 1 + H), pe = o[e];
+        if (want && e < N && pe != null && c[x] != null && x >= e && !(S.gap !== "" && sr * want * 100 >= +S.gap)) {
           let r = want * (c[x] / pe - 1);
-          if (+S.hedge && tk !== "SPY") { const se = S.entry === "open" ? so[e] : sc[e]; r -= want * (sc[x] / se - 1); }
+          if (+S.hedge && tk !== "SPY") r -= want * (sc[x] / so[e] - 1);
           r -= 2 * S.cost / 100;
           out.push({ i, e, x, tk, sig: s, move, want, pre: sr, r }); free = x + 1;
         }
@@ -170,7 +171,7 @@
       const d = stats(Object.keys(by).sort((a, b) => a - b).map((k) => mean(by[k])));
       Object.assign(st, { t: d.t, lo: d.lo, hi: d.hi, r1: d.r1, r2: d.r2, days: d.n });
     }
-    const rule = `Kalshi moves ${S.thr}+ pts in ${S.look} day${S.look > 1 ? "s" : ""}${S.gap !== "" ? `, stock has moved less than ${S.gap}% that way` : ""}; trade at ${S.entry === "open" ? "the next open" : "the close"}, hold ${S.hold} day${S.hold > 1 ? "s" : ""}`;
+    const rule = `Kalshi moves ${S.thr}+ pts in ${S.look} day${S.look > 1 ? "s" : ""}${S.gap !== "" ? `, stock has moved less than ${S.gap}% that way` : ""}; trade at ${S.entry === "open" ? "the next open" : "the open two days later"}, hold ${S.hold} day${S.hold > 1 ? "s" : ""}`;
     if (!st) return `<div class="empty">No trades for this rule (${esc(rule)}). Lower the Kalshi move, or apply it to more markets or stocks.${S.dir === "auto" ? " “Follow its past link” needs 20 earlier days before it will trade." : ""}</div>`;
     let cum = 0; const curve = T.map((t, k) => [k, (cum += t.r * STAKE)]);
     const luck = st.lo > 0 ? ["good", "Likely a real edge", "even the low end of the likely range is positive"] : st.hi < 0 ? ["bad", "Reliably loses", "even the high end of the likely range is negative"]
@@ -187,7 +188,7 @@
       ${table([["Signal day"], ...(multi ? [["Market"], ["Stock"]] : []), ["Kalshi move", "n"], ["Stock so far", "n"], ["Trade"], ["In"], ["Out"], ["Result", "n"]],
         [...T].reverse().slice(0, 80).map((t) => `<tr><td>${D.dates[t.i]}</td>${multi ? `<td class="wrap">${esc(short(t.sig.title, 48))}</td><td>${t.tk}</td>` : ""}<td class="n ${cls(t.move)}">${pts(t.move)} pts</td><td class="n">${pct(t.pre, 2)}</td>
           <td>${t.want > 0 ? "Buy" : "Short"}</td><td>${D.dates[t.e]}</td><td>${D.dates[t.x]}</td><td class="n ${cls(t.r)}">${pct(t.r, 2)}</td></tr>`))}
-      <p class="hint">Each trade is ${S.hedge ? "hedged with an opposite SPY position, " : ""}entered at ${S.entry === "open" ? "the next day's opening price" : "the same day's close (needs an order placed right at 4pm)"}, with ${S.cost}% taken off each way. Positions in the same stock never overlap.</p></div>`;
+      <p class="hint">Each trade is ${S.hedge ? "hedged with an opposite SPY position, " : ""}entered at ${S.entry === "open" ? "the next day's opening price" : "the opening price two days after the signal"}, with ${S.cost}% taken off each way. Positions in the same stock never overlap.</p></div>`;
   }
 
   // ---------------------------------------------------------------- 3. hourly shocks
@@ -331,6 +332,7 @@ python scripts/alpaca_paper.py signal.json --trade    # places the paper order</
   });
   $("built").textContent = `Data built ${D.built}: ${D.signals.length} Kalshi markets, ${Object.keys(D.px).length} stocks and ETFs, ${D.dates[0]} to ${D.dates[N - 1]}.`;
   // The Strategies page (strategies.js) adds its own tabs on top of the same data and helpers.
+  window.SLAB_TEST = { trades };          // used by tests/test_markets.py
   window.SLAB = { D, S, N, STAKE, esc, pct, pts, money, cls, mean, C, O, ret, dP, corr, link, ranks, lagPairs, sig, span, short, stats,
                   lineChart, barChart, scatter, legend, tile, table, VIEWS, render, setTabs: (t, first) => { TABS = t; S.tab = first; } };
   document.addEventListener("DOMContentLoaded", render);

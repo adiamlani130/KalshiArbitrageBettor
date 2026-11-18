@@ -3,3 +3,4 @@ __pycache__/
 data/sports_cache/
 data/stocks_cache/
 data/paper_state.json
+analysis/.neat.cfg

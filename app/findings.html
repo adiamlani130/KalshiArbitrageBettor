@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Strategy Search</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="What survived: over 100,000 machine-searched betting strategies, a grid of betting rules and 2,621 market-stock pairs, each found on one period and tested once on another.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Strategy search · found on one period, tested once on another</span>
+    <h1>What survived</h1>
+    <p class="lede" id="lede"></p>
+  </header>
+  <div class="tabs" role="tablist" style="border:0"><a class="cta-tab" href="#machine">Machine search</a><a class="cta-tab" href="#grid">Grid search</a><a class="cta-tab" href="#stocksec">Markets &amp; stocks</a></div>
+  <main class="sheet" id="machine"></main>
+  <main class="sheet" id="out"></main>
+  <footer>
+    <p><b>Method.</b> Each league's games are split by date: the first 60% to search, the last 40% held back. A fixed grid of rules is searched; a rule is kept only if it is clearly profitable in the search period (t-statistic 2+, 60+ bets). Kept rules are tested once on the held-back games and must pass a Benjamini-Hochberg false-discovery rate of 10%. Market-stock pairs are found in the first half of their days and checked in the second half. Every bet is $10 at the ask, one sample (1–2 minutes) after the rule is seen, after Kalshi's fee.</p>
+    <p>Reproduce with <code>python analysis/discover.py</code>. Research, not betting or investment advice. <span id="built"></span></p>
+  </footer>
+</div>
+<script src="nav.js"></script>
+<script src="data/findings.js"></script>
+<script src="data/evolved.js"></script>
+<script>
+(function () {
+  const F = window.FINDINGS, $ = (id) => document.getElementById(id); if (!F) return;
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const pct = (v, d = 1) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v * 100).toFixed(d) + "%", cls = (v) => (v >= 0 ? "pos" : "neg");
+  const s = F.sports, ok = s.candidates.filter((r) => r.ok), same = F.stocks["Same day"], lead = F.stocks["Kalshi first, stock next day"], lag = F.stocks["Stock first, Kalshi next day"];
+  const tile = (k, v, c = "") => `<div class="tile"><span>${k}</span><b class="${c}">${v}</b></div>`;
+  const table = (head, rows) => `<div class="tablewrap" style="max-height:420px;overflow-y:auto"><table><thead><tr>${head.map((h) => `<th class="${h[1] || ""}">${h[0]}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+  const row = (r, lost) => `<tr><td class="wrap">${esc(r.rule)}</td><td>${esc(r.league)}</td><td>${esc(r.band)}</td><td class="n">${r.dn}</td><td class="n ${cls(r.droi)}">${pct(r.droi)}</td><td class="n">${r.hn}</td><td class="n ${cls(r.hroi)}">${pct(r.hroi)}</td><td>${lost === true ? '<span class="neg">Lost twice</span>' : r.ok ? '<span class="pos">Held up</span>' : r.hroi > 0 ? "Weaker" : '<span class="neg">Failed</span>'}</td></tr>`;
+  const head = [["Rule"], ["League"], ["Pre-game price"], ["Bets", "n"], ["Search period", "n"], ["Bets", "n"], ["Held-back games", "n"], ["Verdict"]];
+  // replication plot: every rule's return in the search period (x) against the held-back period (y)
+  const W = 680, H = 300, L = 46, R = 12, T = 12, B = 30, lim = 0.6, X = (v) => L + (W - L - R) * (Math.max(-lim, Math.min(lim, v)) + lim) / (2 * lim), Y = (v) => T + (H - T - B) * (1 - (Math.max(-lim, Math.min(lim, v)) + lim) / (2 * lim));
+  const dots = s.cloud.map(([a, b]) => `<circle cx="${X(a).toFixed(1)}" cy="${Y(b).toFixed(1)}" r="2" fill="var(--market)" opacity=".45"/>`).join("")
+    + s.candidates.map((r) => `<circle cx="${X(r.droi).toFixed(1)}" cy="${Y(r.hroi).toFixed(1)}" r="5" fill="${r.ok ? "var(--good)" : "var(--warn)"}" stroke="var(--sheet)" stroke-width="1.5"><title>${esc(r.rule)} · ${esc(r.league)}</title></circle>`).join("");
+  const grid = [-0.5, -0.25, 0.25, 0.5].map((t) => `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line-2)"/><text x="${L - 6}" y="${Y(t) + 4}" text-anchor="end">${t * 100}%</text><text x="${X(t)}" y="${H - 12}" text-anchor="middle">${t * 100}%</text>`).join("");
+  const plot = `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Each rule's return in the search period against the held-back period">${grid}
+    <line x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--ink-3)"/><line x1="${X(0)}" x2="${X(0)}" y1="${T}" y2="${H - B}" stroke="var(--ink-3)"/>${dots}</svg></div>`;
+  const ev = window.EVOLVED;
+  $("lede").innerHTML = `Machines searched for betting strategies${ev ? `: a genetic algorithm scored <b>${ev.funnel.evaluated.toLocaleString()}</b> rules, NEAT evolved neural networks, and a gradient-boosted model tried to out-forecast the market` : ""}. A grid search tested <b>${s.tested.toLocaleString()}</b> more rules and <b>${same.tested.toLocaleString()}</b> market-stock pairs. Every idea was found on one stretch of time and judged once on a later stretch it had never seen. This page shows what was left.`;
+  $("out").innerHTML = `<div style="display:grid;gap:22px">
+    <p class="headline">Almost nothing makes money. <b>${s.candidates.length}</b> of ${s.tested.toLocaleString()} rules looked profitable in the search period, fewer than the roughly ${Math.round(s.tested * 0.0228)} luck alone would produce, and <b>${ok.length}</b> held up on the held-back games. What does hold up is the way to <i>lose</i>: <b>${s.n_losers}</b> rules lost clearly in both periods, nearly all of them bets on the team that is behind.</p>
+    <div class="tiles">${tile("Rules tried", s.tested.toLocaleString())}${tile("Looked profitable", s.candidates.length)}${tile("Held up", ok.length, "pos")}${tile("Lost in both periods", s.n_losers, "neg")}${tile("Same direction both periods", Math.round(s.agree / s.tested * 100) + "%")}${tile("Market-stock links that held", `${same.replicated} of ${same.found}`)}</div>
+    <div id="grid"><h2>Grid search: ${s.tested.toLocaleString()} rules found on 60% of games, tested on the other 40%</h2></div>
+    <div><h2>1. Sports rules that looked profitable</h2><p class="note" style="margin:6px 0 10px">Green held up on the held-back games after correcting for the number of rules tried. Treat even those as leads to keep watching, not money in the bank.</p>${table(head, s.candidates.map((r) => row(r)))}</div>
+    <div><h2>2. Every rule, search period vs held-back period</h2><p class="note" style="margin:6px 0 10px">Each grey dot is one rule: its return when it was searched for (across) and on the later games (up). Dots in the lower left lost twice. The top right, where real edges would sit, is nearly empty. Coloured dots are the rules from the table above.</p>${plot}</div>
+    <div><h2>3. The reliable way to lose</h2><p class="note" style="margin:6px 0 10px">The strongest repeatable pattern in the data: backing whoever is behind, or fading a team that has reached 90¢, loses in both periods. Prices on long shots are too high. The other side of these bets is not automatically profitable, because the fee and the bid/ask spread eat the gap.</p>${table(head, s.losers.map((r) => row(r, true)))}</div>
+    <div id="stocksec"><h2>4. Prediction markets and stocks</h2><p class="note" style="margin:6px 0 10px">A link counts as found if it is very strong (t-statistic 3+) in the first half of a pair's days, and as held up if it keeps its direction and stays clear (t-statistic 2+) in the second half.</p>
+      ${table([["Timing"], ["Pairs tried", "n"], ["Strong in first half", "n"], ["Expected by luck", "n"], ["Held up in second half", "n"]], Object.entries(F.stocks).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="n">${v.tested.toLocaleString()}</td><td class="n">${v.found}</td><td class="n">${v.by_luck}</td><td class="n ${v.replicated ? "pos" : "neg"}">${v.replicated}</td></tr>`))}
+      <p class="headline" style="margin-top:12px">Kalshi and stocks move <b>together</b>: ${same.replicated} of ${same.found} same-day links held up. Neither one <b>leads</b> the other by a day: ${lead.replicated} of ${lead.found} and ${lag.replicated} of ${lag.found} held up, so there is no next-day lag to trade in either direction.</p>
+      <h3 style="margin:14px 0 8px">Strongest same-day links that held up</h3>
+      ${table([["Kalshi market"], ["Stock"], ["Days", "n"], ["Link, first half", "n"], ["Link, second half", "n"]], same.top.map((r) => `<tr><td class="wrap">${esc(r.market)}</td><td>${r.stock}</td><td class="n">${r.days}</td><td class="n ${cls(r.r1)}">${r.r1.toFixed(2)}</td><td class="n ${cls(r.r2)}">${r.r2.toFixed(2)}</td></tr>`))}</div></div>`;
+  $("built").textContent = `Built ${F.built}.`;
+  renderMachine(window.EVOLVED, { esc, pct, cls, tile, table });
+})();
+
+// ---------------------------------------------------------------- machine search (analysis/evolve.py)
+function renderMachine(V, h) {
+  const el = document.getElementById("machine"); if (!V) { el.hidden = true; return; }
+  const { esc, pct, cls, tile, table } = h, fmt = (n) => Number(n).toLocaleString();
+  const fu = V.funnel, steps = [["Rules scored on the search games", fu.evaluated], ["Clearly profitable there (t ≥ 2)", fu.train_good],
+    ["Still profitable on the validation games", fu.validated], ["Sent to the held-back test", fu.tested], ["Confirmed on the test games", fu.confirmed]];
+  const mx = Math.log10(fu.evaluated + 1);
+  const funnel = `<div style="display:grid;gap:8px">${steps.map(([l, v], i) => `<div style="display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:12px;align-items:center">
+      <span class="note">${l}</span><div style="display:flex;align-items:center;gap:8px"><div style="height:18px;border-radius:5px;background:${i === 4 ? "var(--good)" : "var(--accent)"};opacity:${1 - i * .12};width:${Math.max(1.5, 100 * Math.log10(v + 1) / mx)}%"></div><b class="num">${fmt(v)}</b></div></div>`).join("")}</div>`;
+  const spark = (c) => { if (!c || c.length < 2) return ""; const lo = Math.min(0, ...c), hi = Math.max(0, ...c), W = 140, H = 34, X = (i) => W * i / (c.length - 1), Y = (v) => H - 2 - (H - 4) * (v - lo) / ((hi - lo) || 1);
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true"><line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)"/><path d="${c.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join("")}" fill="none" stroke="${c[c.length - 1] >= 0 ? "var(--good)" : "var(--bad)"}" stroke-width="1.6"/></svg>`; };
+  const per = (x) => `<td class="n ${cls(x.roi)}">${pct(x.roi)}</td><td class="n">${fmt(x.n)}</td>`;
+  const nearOnly = V.rules.length && V.rules.every((r) => !r.validated);
+  const rules = (nearOnly ? `<p class="compare">No rule held up on the validation games, so none was sent to the test. Below are the closest calls: the best rules on the search games that were also best on validation. Their test results are shown for interest only.</p>` : "") + table([["Strategy found by the genetic algorithm", "wrap"], ["Search", "n"], ["Bets", "n"], ["Validation", "n"], ["Bets", "n"], ["Test", "n"], ["Bets", "n"], ["Test curve"], ["Verdict"]],
+    V.rules.map((r) => `<tr><td class="wrap">${esc(r.rule)}</td>${per(r.train)}${per(r.valid)}${per(r.test)}<td>${spark(r.curve)}</td><td>${r.confirmed ? '<span class="pill good"><i>Confirmed</i></span>' : !r.validated ? '<span class="neg">Failed validation</span>' : r.test.roi > 0 ? "Weaker on test" : '<span class="neg">Failed on test</span>'}</td></tr>`));
+  // where real rules land against random ones on the test games
+  const nul = V.null || [], lo = -0.6, hi = 0.4, bins = 40, cnt = new Array(bins).fill(0);
+  nul.forEach((v) => cnt[Math.max(0, Math.min(bins - 1, Math.floor((v - lo) / (hi - lo) * bins)))]++);
+  const W = 680, H = 170, L = 10, R = 10, T = 10, B = 26, mxc = Math.max(...cnt, 1), X = (v) => L + (W - L - R) * (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo);
+  const hist = `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Test-game returns of random rules, with the evolved rules marked">
+    ${cnt.map((c, i) => `<rect x="${X(lo + (hi - lo) * i / bins) + 1}" y="${H - B - (H - T - B) * c / mxc}" width="${(W - L - R) / bins - 2}" height="${(H - T - B) * c / mxc}" fill="var(--market)" opacity=".5"/>`).join("")}
+    ${V.rules.filter((r) => r.validated || nearOnly).map((r) => `<line x1="${X(r.test.roi)}" x2="${X(r.test.roi)}" y1="${T}" y2="${H - B}" stroke="${r.confirmed ? "var(--good)" : "var(--accent)"}" stroke-width="2"><title>${esc(r.rule)}: ${pct(r.test.roi)}</title></line>`).join("")}
+    <line x1="${X(0)}" x2="${X(0)}" y1="${T}" y2="${H - B}" stroke="var(--ink)" stroke-dasharray="3 3"/>
+    ${[-0.5, -0.25, 0, 0.25].map((t) => `<text x="${X(t)}" y="${H - 8}" text-anchor="middle">${pct(t, 0)}</text>`).join("")}</svg></div>`;
+  const nt = V.neat, gb = V.gbm, b = V.baselines || {};
+  const card = (title, body) => `<div class="study" style="gap:10px"><h3>${title}</h3>${body}</div>`;
+  const mini = (x) => `<div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">${tile("Search", pct(x.train.roi), cls(x.train.roi))}${tile("Validation", pct(x.valid.roi), cls(x.valid.roi))}${tile("Test", pct(x.test.roi), cls(x.test.roi))}</div>`;
+  el.innerHTML = `<div style="display:grid;gap:20px">
+    <p class="headline">Three machine-learning searches looked for in-game betting strategies across <b>${fmt(V.points)}</b> moments in <b>${fmt(V.games)}</b> games. Games were split by date: searched on ${V.dates[0]} to ${V.dates[1]}, chosen on ${V.dates[1]} to ${V.dates[2]}, and tested once on ${V.dates[2]} to ${V.dates[3]}.</p>
+    <div><h2>1. A genetic algorithm evolving readable rules</h2><p class="note" style="margin:6px 0 12px">Each rule picks a moment (before the start or a stretch of the game), a sport or league, a price range and up to three conditions. The fittest rules on the search games bred and mutated for many generations.</p>${funnel}</div>
+    ${rules}
+    <div><h3 style="margin-bottom:6px">Against luck</h3><p class="note" style="margin-bottom:8px">Grey bars: how ${fmt(nul.length)} random rules did on the test games. Lines: the rules shown above (green if confirmed). A real edge should sit clearly to the right of the grey hill and of zero.</p>${hist}</div>
+    <div class="studies">
+      ${nt ? card(`2. NEAT: evolved neural networks`, `<p>${fmt(nt.evolved)} networks evolved (NeuroEvolution of Augmenting Topologies) to decide, moment by moment, whether to bet. The best on the validation games has ${nt.nodes} nodes and ${nt.conns} connections.</p>${mini(nt)}<p>${nt.confirmed ? "It held up on the test games." : "It did not hold up clearly on the test games."} ${nt.test.n} test bets.</p>${spark(nt.curve)}`) : ""}
+      ${gb ? card(`3. Gradient boosting vs the market`, `<p>A model trained on the search games to predict who wins, from the same information a bettor has. Lower error is better.</p>
+        <div class="tiles" style="grid-template-columns:repeat(2,minmax(0,1fr))">${tile("Model error, test", gb.calib.model_test.toFixed(4))}${tile("Kalshi's price, test", gb.calib.market_test.toFixed(4))}</div>
+        <p>${gb.calib.market_test <= gb.calib.model_test ? "Kalshi's own price was the better forecaster." : "The model forecast slightly better than the price."} Betting whenever the model saw a ${Math.round(gb.tau * 100)}¢+ edge after fees: ${pct(gb.test.roi)} on ${gb.test.n} test bets.</p>${spark(gb.curve)}`) : ""}
+      ${card("Simple rules on the same test games", table([["Strategy"], ["Return", "n"], ["Bets", "n"]], Object.entries(b).map(([k, v]) => `<tr><td class="wrap">${esc(k)}</td><td class="n ${cls(v.roi)}">${pct(v.roi)}</td><td class="n">${fmt(v.n)}</td></tr>`)))}
+    </div>
+    <p class="hint">Reproduce with <code>python analysis/evolve.py</code> (about ${Math.max(1, Math.round(V.minutes))} minutes). Confirmed means a test t-statistic of 2+ that also survives a 5% false-discovery rate across every rule sent to the test.</p></div>`;
+}
+</script>

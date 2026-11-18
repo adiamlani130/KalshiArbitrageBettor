@@ -3,112 +3,249 @@
 <meta charset="utf-8">
 <title>Kalshi Edge Lab</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Backtest betting strategies in 14 sports against real Kalshi prediction-market prices, with fees included, and test how prediction markets line up with stocks.">
+<meta name="description" content="A research lab for prediction markets: backtest betting strategies on 16,834 games across 14 leagues, line Kalshi up against stocks, and see which strategies survive on data they have never seen.">
 <meta property="og:title" content="Kalshi Edge Lab">
-<meta property="og:description" content="Backtest betting strategies in 14 sports against real Kalshi prices, and test how prediction markets line up with stocks.">
+<meta property="og:description" content="Backtest betting strategies on real Kalshi prices across 14 leagues, test prediction markets against stocks, and see what survives out of sample.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="style.css">
+<style>
+/* Homepage: a hero that replays real games price by price, then the ways into the lab, then what the data says. */
+.hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 36px; align-items: center; padding: 28px 0 8px }
+@media (max-width: 960px) { .hero { grid-template-columns: minmax(0, 1fr); gap: 24px } }
+.hero h1 { font-size: clamp(36px, 5.4vw, 64px); line-height: 1.02; letter-spacing: -0.025em }
+.hero h1 em { font-style: normal; background: linear-gradient(100deg, var(--accent), var(--good)); -webkit-background-clip: text; background-clip: text; color: transparent }
+.hero .lede { font-size: 17px; margin-top: 16px }
+.ctas { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px }
+.cta { font: 600 14px var(--body); text-decoration: none; padding: 11px 16px; border-radius: 10px; border: 1px solid var(--line); color: var(--ink); background: var(--sheet) }
+.cta.primary { background: var(--ink); color: var(--bg); border-color: var(--ink) }
+.cta:hover { transform: translateY(-1px) } .cta { transition: transform .15s }
 
+.replay { background: var(--sheet); border: 1px solid var(--line); border-radius: 16px; padding: 16px 16px 12px; display: grid; gap: 10px; box-shadow: 0 20px 50px -30px rgba(0,0,0,.35); position: relative; overflow: hidden; min-width: 0 }
+.replay::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(var(--line-2) 1px, transparent 1px), linear-gradient(90deg, var(--line-2) 1px, transparent 1px); background-size: 28px 28px; opacity: .55; pointer-events: none }
+.replay > * { position: relative }
+.rhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 500 12px var(--mono); color: var(--ink-3) }
+.live { display: inline-flex; align-items: center; gap: 6px; color: var(--bad); font-weight: 500; text-transform: uppercase; letter-spacing: .06em }
+.live i { width: 7px; height: 7px; border-radius: 50%; background: var(--bad); animation: pulse 1.4s infinite }
+@keyframes pulse { 50% { opacity: .25 } }
+.board { display: grid; gap: 6px }
+.team { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--bg) }
+.team .dot { width: 10px; height: 10px; border-radius: 3px }
+.team .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.team .px { font: 500 26px var(--mono); font-variant-numeric: tabular-nums; min-width: 3.2ch; text-align: right }
+.team .od { font: 400 12px var(--mono); color: var(--ink-3); min-width: 6ch; text-align: right }
+.team.lead .px { color: var(--good) }
+.rchart svg { width: 100%; height: auto; display: block }
+.rchart text { fill: var(--ink-3); font: 10px var(--mono) }
+.rfoot { font-size: 12.5px; color: var(--ink-2); min-height: 18px; display: flex; justify-content: space-between; gap: 10px }
+.rfoot b { color: var(--ink) }
+.pips { display: flex; gap: 5px } .pips i { width: 16px; height: 3px; border-radius: 2px; background: var(--line) } .pips i.on { background: var(--accent) }
+
+.stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden }
+@media (max-width: 960px) { .stats { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
+@media (max-width: 520px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+.stat { background: var(--sheet); padding: 16px; display: grid; gap: 2px }
+.stat b { font: 500 clamp(22px, 2.6vw, 30px) var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em }
+.stat span { font-size: 12.5px; color: var(--ink-2) }
+
+.tape { border-block: 1px solid var(--line); overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent) }
+.tape-in { display: flex; gap: 30px; width: max-content; padding: 11px 0; animation: tape 90s linear infinite }
+.tape:hover .tape-in { animation-play-state: paused }
+@keyframes tape { to { transform: translateX(-50%) } }
+.tick { display: inline-flex; gap: 8px; align-items: baseline; white-space: nowrap; font-size: 13px; color: var(--ink-2) }
+.tick b { font: 500 13px var(--mono); color: var(--ink) }
+.tapecap { font: 500 11px var(--mono); color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px }
+
+section.block { display: grid; gap: 16px; padding-top: 18px }
+.block > h2 { font-size: clamp(24px, 3vw, 32px); font-weight: 800 }
+.block > .sub { color: var(--ink-2); max-width: 70ch; margin-top: -8px }
+.ways { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px }
+.way { grid-column: span 2; background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 8px; text-decoration: none; color: var(--ink); transition: border-color .15s, transform .15s; align-content: start; min-width: 0 }
+.way.wide { grid-column: span 3 }
+.way:hover { border-color: var(--ink-3); transform: translateY(-2px) }
+@media (max-width: 960px) { .ways { grid-template-columns: minmax(0, 1fr) } .way, .way.wide { grid-column: auto } }
+.way .k { font: 500 11px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3) }
+.way h3 { font-size: 19px }
+.way p { font-size: 14px; color: var(--ink-2) }
+.way .go { font: 600 13px var(--body); color: var(--accent) }
+.way svg { width: 100%; height: 74px; display: block }
+.draw { stroke-dasharray: var(--len); stroke-dashoffset: var(--len) }
+.seen .draw { animation: draw 1.8s ease forwards }
+@keyframes draw { to { stroke-dashoffset: 0 } }
+.bar { transform-origin: left center; transform: scaleX(0) } .seen .bar { animation: grow 1.2s cubic-bezier(.2,.8,.2,1) forwards }
+@keyframes grow { to { transform: scaleX(1) } }
+
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px }
+@media (max-width: 900px) { .steps { grid-template-columns: minmax(0, 1fr) } }
+.step { border-top: 2px solid var(--ink); padding-top: 12px; display: grid; gap: 6px }
+.step .n { font: 500 12px var(--mono); color: var(--ink-3) }
+.step p { font-size: 14px; color: var(--ink-2) }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px }
+@media (max-width: 900px) { .facts { grid-template-columns: minmax(0, 1fr) } }
+.fact { background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 8px; align-content: start }
+.fact b { font: 500 clamp(30px, 3.6vw, 42px) var(--mono); letter-spacing: -0.03em }
+.fact p { font-size: 14px; color: var(--ink-2) }
+@media (prefers-reduced-motion: reduce) { .tape-in { animation: none } .draw { stroke-dashoffset: 0 } .bar { transform: none } .live i { animation: none } .cta, .way { transition: none } }
+</style>
+<body>
 <div class="wrap">
-  <header class="top">
-    <nav class="pages" aria-label="Pages"><a href="index.html" aria-current="page">Sports lab</a><a href="stocks.html">Markets vs stocks</a><a href="strategies.html">Strategies &amp; hedging</a></nav>
-    <span class="eyebrow">Kalshi prediction markets · 2025–26 prices</span>
-    <h1>Kalshi Edge Lab</h1>
-    <p class="lede">Test your own sports betting ideas against real Kalshi prices. Pick a sport and a sample, choose when you'd bet and on whom, add conditions, and see what you would have made. <b>All sports · price paths</b> covers 14 leagues and lets you bet on price triggers, drops and jumps during the game. Every bet is $10 at the real asking price, after Kalshi's fee.</p>
-    <div class="seg" id="dataset" role="group" aria-label="Dataset"></div>
-    <p class="hint" id="dsnote" hidden></p>
-  </header>
-
-  <div class="bench">
-    <aside class="rail">
-      <section class="panel">
-        <h3>Strategy</h3>
-        <p class="hint">Build any strategy with the boxes below: pick when you bet, who you bet on, a price range, and as many conditions as you like. Or load one from the original research and tweak it.</p>
-        <select id="preset" aria-label="Load a strategy from the original research"><option value="">Load a strategy from the research…</option></select>
-        <button class="btn" id="scratch">Start from scratch</button>
-      </section>
-
-      <section class="panel" id="leaguebox" hidden>
-        <h3>Leagues</h3>
-        <div class="chips" id="leagues"></div>
-        <button class="btn" id="allleagues">All / just one</button>
-        <p class="hint">Each league's prices load the first time you switch it on.</p>
-      </section>
-
-      <section class="panel">
-        <h3>Sample</h3>
-        <div class="row2">
-          <label class="field"><span>From</span><input type="date" id="from"></label>
-          <label class="field"><span>To</span><input type="date" id="to"></label>
-        </div>
-        <div class="row2">
-          <label class="field"><span>Use</span>
-            <select id="take"><option value="all">Everything</option><option value="recent">Most recent</option><option value="random">Random</option></select></label>
-          <label class="field"><span id="nlabel">How many</span><input type="number" id="n" min="10" step="50" value="1000"></label>
-        </div>
-        <button class="btn" id="reshuffle" hidden>Draw a new random sample</button>
-        <p class="hint" id="samplenote"></p>
-      </section>
-
-      <section class="panel">
-        <h3>Your bet</h3>
-        <label class="field"><span>When you bet</span><select id="moment"></select></label>
-        <div class="row2" id="params" hidden></div>
-        <label class="field"><span>Who you bet on</span><select id="side"></select></label>
-        <div class="row2">
-          <label class="field"><span>Price at least (¢)</span><input type="number" id="pmin" min="1" max="99" value="1"></label>
-          <label class="field"><span>Price at most (¢)</span><input type="number" id="pmax" min="1" max="99" value="99"></label>
-        </div>
-        <p class="hint" id="oddsnote"></p>
-      </section>
-
-      <section class="panel" id="exitpanel" hidden>
-        <h3>Getting out early (optional)</h3>
-        <div class="row3">
-          <label class="field"><span>Sell at +¢</span><input type="number" id="exit-tp" min="0" max="98" placeholder="—"></label>
-          <label class="field"><span>Stop at −¢</span><input type="number" id="exit-sl" min="0" max="98" placeholder="—"></label>
-          <label class="field"><span>After min</span><input type="number" id="exit-tm" min="0" max="400" placeholder="—"></label>
-        </div>
-        <p class="hint">Leave blank to hold every bet to the final result. Selling early pays Kalshi's fee a second time and sells at the bid.</p>
-      </section>
-
-      <section class="panel">
-        <h3>Only when…</h3>
-        <div class="filters" id="filters"></div>
-        <button class="btn" id="addfilter">Add a condition</button>
-        <p class="hint">Conditions only use what you'd know at the moment you bet. To look at things that happen later, like how long set 2 lasted, use <b>Find a link</b>.</p>
-      </section>
-    </aside>
-
-    <main class="sheet">
-      <div class="tabs" role="tablist">
-        <button role="tab" id="tab-bet" aria-selected="true">Test a bet</button>
-        <button role="tab" id="tab-link" aria-selected="false">Find a link</button>
-        <button role="tab" id="tab-scan" aria-selected="false">Strongest links</button>
+  <section class="hero">
+    <div>
+      <span class="eyebrow">A research lab for prediction markets</span>
+      <h1 style="margin-top:10px">Find the edge.<br><em>Or prove there isn't one.</em></h1>
+      <p class="lede">Test betting strategies on real Kalshi prices across 14 leagues, line prediction markets up against the stock market, and see which ideas survive on data they've never seen. Every bet is priced at the real ask, after fees, with no peeking ahead.</p>
+      <div class="ctas"><a class="cta primary" href="sports.html">Open the strategy builder →</a><a class="cta" href="findings.html">See what survived</a></div>
+    </div>
+    <div class="replay" aria-live="off">
+      <div class="rhead"><span class="live"><i></i>Replay</span><span id="rmeta">—</span></div>
+      <div class="board">
+        <div class="team" id="tA"><i class="dot" style="background:var(--accent)"></i><span class="nm">—</span><span class="px">—</span><span class="od"></span></div>
+        <div class="team" id="tB"><i class="dot" style="background:var(--ink-3)"></i><span class="nm">—</span><span class="px">—</span><span class="od"></span></div>
       </div>
-      <div id="view-bet"></div>
-      <div id="view-link" hidden>
-        <div class="row2" style="max-width:640px">
-          <label class="field"><span>Compare by</span><select id="xcol"></select></label>
-          <label class="field"><span>Groups</span><select id="bins"><option>3</option><option>4</option><option selected>5</option><option>6</option><option>8</option><option>10</option></select></label>
-        </div>
-        <div id="linkout"></div>
-      </div>
-      <div id="view-scan" hidden></div>
-    </main>
+      <div class="rchart"><svg id="rsvg" viewBox="0 0 520 170" role="img" aria-label="Win probability during a real game"></svg></div>
+      <div class="rfoot"><span id="rnote">Real Kalshi prices, replayed.</span><span class="pips" id="pips"></span></div>
+    </div>
+  </section>
+
+  <div class="stats" id="stats"></div>
+
+  <div>
+    <p class="tapecap" id="tapecap">Kalshi markets</p>
+    <div class="tape"><div class="tape-in" id="tape"></div></div>
   </div>
 
+  <section class="block">
+    <h2>Five ways in</h2>
+    <p class="sub">Two sports labs, two markets labs, and one page that tells you which ideas held up.</p>
+    <div class="ways" id="ways">
+      <a class="way wide" href="sports.html"><span class="k">Sports · build</span><h3>Strategy builder</h3>
+        <svg viewBox="0 0 300 74" aria-hidden="true"><path class="draw" style="--len:420" d="M0,30 C30,28 45,22 60,26 S90,44 110,50 S140,62 150,58 S175,30 190,34 S220,20 240,18 S270,12 300,10" fill="none" stroke="var(--accent)" stroke-width="2.5"/><line x1="0" x2="300" y1="56" y2="56" stroke="var(--line)" stroke-dasharray="4 4"/><circle cx="150" cy="58" r="5" fill="var(--warn)"/><text x="158" y="70" font-size="10" fill="var(--ink-3)" font-family="IBM Plex Mono">falls to 30¢ → buy</text></svg>
+        <p>Pick a trigger (“the favorite falls to 30¢”, “a 15¢ crash in 10 minutes”), who to back, which leagues and conditions. Sweep the threshold, save it, compare it, share it as a link.</p><span class="go">16,834 games · 14 leagues →</span></a>
+      <a class="way wide" href="research.html"><span class="k">Sports · examples</span><h3>Case studies</h3>
+        <svg viewBox="0 0 300 74" aria-hidden="true"><rect class="bar" x="0" y="8" width="150" height="14" rx="4" fill="var(--good)" style="animation-delay:.1s"/><rect class="bar" x="0" y="30" width="80" height="14" rx="4" fill="var(--good)" style="animation-delay:.25s"/><rect class="bar" x="0" y="52" width="280" height="14" rx="4" fill="var(--bad)" style="animation-delay:.4s"/>
+          <g font-size="10" font-family="IBM Plex Mono" fill="var(--ink-3)"><text x="156" y="19">tennis: set-1 winners 78.9%</text><text x="86" y="41">NBA: losing favorite +9.5%</text></g></svg>
+        <p>The three original studies, rebuilt with real scores: does winning set 1 decide a tennis match, should you back a favorite losing at halftime, and is a 20-point comeback worth the price?</p><span class="go">Tennis and NBA →</span></a>
+      <a class="way" href="stocks.html"><span class="k">Markets</span><h3>Markets vs stocks</h3>
+        <svg viewBox="0 0 300 74" aria-hidden="true"><path class="draw" style="--len:380" d="M0,50 L40,46 L70,52 L100,30 L130,34 L160,22 L190,26 L220,14 L260,18 L300,8" fill="none" stroke="var(--accent)" stroke-width="2.5"/><path class="draw" style="--len:380;animation-delay:.3s" d="M0,56 L40,52 L70,58 L100,40 L130,38 L160,30 L190,34 L220,24 L260,22 L300,16" fill="none" stroke="var(--ink-3)" stroke-width="2"/></svg>
+        <p>336 Kalshi markets (Fed, tariffs, elections, bitcoin) against 242 stocks: who moves first, hourly shocks, announcements and earnings calls.</p><span class="go">Explore →</span></a>
+      <a class="way" href="strategies.html"><span class="k">Markets</span><h3>Strategies &amp; hedging</h3>
+        <svg viewBox="0 0 300 74" aria-hidden="true"><path class="draw" style="--len:420" d="M0,37 L30,20 L60,55 L90,15 L120,60 L150,25 L180,62 L210,18 L240,58 L270,22 L300,40" fill="none" stroke="var(--market)" stroke-width="1.8"/><path class="draw" style="--len:330;animation-delay:.4s" d="M0,37 L30,33 L60,41 L90,32 L120,42 L150,35 L180,43 L210,34 L240,41 L270,35 L300,38" fill="none" stroke="var(--good)" stroke-width="2.5"/></svg>
+        <p>Price Kalshi against the options market, trade a takeover spread against Kalshi's deal odds, and hedge a stock with a contract.</p><span class="go">Explore →</span></a>
+      <a class="way" href="findings.html"><span class="k">Results</span><h3>Strategy search</h3>
+        <svg viewBox="0 0 300 74" aria-hidden="true" id="funnelsvg"></svg>
+        <p>A genetic algorithm, NEAT neural networks and a gradient-boosted model searched for strategies. Here's what was left after a held-back test.</p><span class="go">See what survived →</span></a>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>How every number is made</h2>
+    <div class="steps">
+      <div class="step"><span class="n">01 · Real prices</span><h3>You pay what you'd really pay</h3><p>Every bet buys at the real ask from Kalshi's minute-by-minute order book, $10 at a time, minus Kalshi's fee. Empty order books are never traded.</p></div>
+      <div class="step"><span class="n">02 · No peeking</span><h3>Only what you knew at the time</h3><p>A rule sees prices up to the moment it fires and fills 1–2 minutes later. <span id="ntests">Automated</span> tests rewrite the future of real games and check that no bet changes.</p></div>
+      <div class="step"><span class="n">03 · Held-back test</span><h3>Found on one period, judged on another</h3><p>Ideas are searched on older games, chosen on newer ones, and tested once on the newest, with a correction for how many ideas were tried.</p></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>What the data says</h2>
+    <div class="facts" id="facts"></div>
+  </section>
+
   <footer>
-    <p><b>Where the data comes from.</b> Prices are 1-minute bid/ask candles from Kalshi's public API. The first three datasets add real scores: ATP set results (Jan–Sep 2026) and ESPN NBA play-by-play (2025–26 season). <b>All sports · price paths</b> is prices only, for 14 leagues since August 2025: the price before the game and every 1–2 minutes during it. Game start times come from Kalshi's schedule; tennis and UFC starts are estimated from the burst in trading.</p>
-    <p><b>How bets are priced.</b> You buy at the ask 1–5 minutes after the moment, $10 per bet, minus Kalshi's taker fee (7% × contracts × price × (1 − price), rounded up to the cent). "Before the match" tennis prices are the midpoint plus 1¢, because only midpoints were saved for that moment.</p>
-    <p>Research, not betting advice. Past prices don't guarantee future results, and small samples can look profitable by luck.</p>
+    <p>Built by Adi Amlani, University of Florida (Finance &amp; Mathematics). Prices from Kalshi's public API, scores from ESPN, stock prices from Yahoo Finance. Research, not betting or investment advice.</p>
     <p id="built"></p>
   </footer>
 </div>
+<script src="nav.js"></script>
+<script src="data/home.js"></script>
+<script>
+(function () {
+  const H = window.HOME, $ = (id) => document.getElementById(id); if (!H) return;
+  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const fmt = (n) => Number(n).toLocaleString();
 
-<script src="data.js"></script>
-<script src="data/sports_index.js"></script>
-<script src="datasets.js"></script>
-<script src="paths.js"></script>
-<script src="lab.js"></script>
+  // Number scramble: digits flicker through random values, then settle left to right.
+  function scramble(el, text, ms = 900) {
+    const token = (el._tok = (el._tok || 0) + 1);          // only the newest scramble on an element may write
+    if (calm) { el.textContent = text; return; }
+    const t0 = performance.now();
+    const tick = (now) => { if (el._tok !== token) return; const k = Math.min(1, (now - t0) / ms), fixed = Math.floor(k * text.length);
+      el.textContent = [...text].map((ch, i) => i < fixed || !/\d/.test(ch) ? ch : String(Math.floor(Math.random() * 10))).join("");
+      if (k < 1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }
+  const seen = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("seen"); e.target.dispatchEvent(new Event("seen")); seen.unobserve(e.target); } }), { threshold: 0.3 });
+
+  // ---------------------------------------------------------------- stats
+  const st = H.stats, F = H.findings || {};
+  const items = [[st.games, "games with minute-by-minute prices"], [st.leagues, "leagues and tours"], [st.markets, "Kalshi markets vs stocks"],
+                 [st.stocks, "stocks and ETFs"], [st.rules, "strategies scored by machine"], [st.tests, "automated tests"]];
+  $("stats").innerHTML = items.map(([v, l]) => `<div class="stat"><b data-v="${fmt(v)}">${fmt(v).replace(/\d/g, "0")}</b><span>${esc(l)}</span></div>`).join("");
+  $("stats").addEventListener("seen", () => $("stats").querySelectorAll("b").forEach((b, i) => setTimeout(() => scramble(b, b.dataset.v, 1100), i * 90)));
+  seen.observe($("stats"));
+  $("ntests").textContent = `${st.tests} automated`;
+
+  // ---------------------------------------------------------------- ticker tape (real last prices)
+  const tk = (H.tape || []).map((m) => `<span class="tick">${esc(m.t)} <b>${m.p}%</b><span class="${m.d >= 0 ? "pos" : "neg"}">${m.d >= 0 ? "▲" : "▼"} ${Math.abs(m.d).toFixed(1)}</span></span>`).join("");
+  $("tape").innerHTML = tk + tk;
+  $("tapecap").textContent = `Kalshi markets · last price as of ${H.asof} · change over 5 trading days`;
+
+  // ---------------------------------------------------------------- funnel mini-chart
+  const fu = F.funnel;
+  if (fu) {
+    const rows = [["scored", fu.evaluated], ["good in search", fu.train_good], ["validated", fu.validated], ["confirmed", fu.confirmed]];
+    const mx = Math.log10(fu.evaluated + 1);
+    $("funnelsvg").innerHTML = rows.map(([l, v], i) => `<rect class="bar" style="animation-delay:${i * .15}s" x="0" y="${2 + i * 18}" width="${Math.max(3, 300 * Math.log10(v + 1) / mx * .62)}" height="13" rx="3" fill="${i === 3 ? "var(--good)" : "var(--accent)"}" opacity="${1 - i * .15}"/>
+      <text x="${Math.max(3, 300 * Math.log10(v + 1) / mx * .62) + 6}" y="${12 + i * 18}" font-size="10" font-family="IBM Plex Mono" fill="var(--ink-3)">${fmt(v)} ${l}</text>`).join("");
+  }
+  document.querySelectorAll(".way").forEach((w) => seen.observe(w));
+
+  // ---------------------------------------------------------------- what the data says
+  const facts = [];
+  if (F.losers != null) facts.push([`${F.losers}`, "betting rules lost money in both the search period and on later games. Nearly all of them back the team that's behind: long shots are overpriced in every sport."]);
+  if (F.same != null) facts.push([`${F.same} vs ${F.lead ?? 0}`, "market-stock links that held up when moving together on the same day, against links where Kalshi led the stock by a day. They move together; neither leads."]);
+  if (F.gbm) facts.push([F.gbm.market_test <= F.gbm.model_test ? "Market wins" : "Model wins",
+    `A gradient-boosted model trained on ${fmt(st.points)} in-game moments scored ${F.gbm.model_test.toFixed(4)} on later games; Kalshi's own price scored ${F.gbm.market_test.toFixed(4)} (lower is better).`]);
+  else if (F.tested) facts.push([`${F.survived} of ${fmt(F.tested)}`, "rules that looked profitable in the search period still did on later games."]);
+  $("facts").innerHTML = facts.map(([b, p]) => `<div class="fact"><b data-v="${esc(b)}">${esc(b)}</b><p>${esc(p)}</p></div>`).join("");
+  $("facts").addEventListener("seen", () => $("facts").querySelectorAll("b").forEach((b) => scramble(b, b.dataset.v, 900))); seen.observe($("facts"));
+
+  // ---------------------------------------------------------------- replay: real games, price by price
+  const G = H.games || []; if (!G.length) return;
+  const W = 520, Ht = 170, L = 28, R = 8, T = 8, B = 20, X = (i, n) => L + (W - L - R) * i / Math.max(1, n - 1), Y = (v) => T + (Ht - T - B) * (1 - v / 100);
+  const odds = (p) => p <= 0 || p >= 100 ? "" : p >= 50 ? "−" + Math.round(100 * p / (100 - p)) : "+" + Math.round(100 * (100 - p) / p);
+  const grid = [0, 25, 50, 75, 100].map((v) => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-dasharray="${v === 50 ? "0" : "3 4"}"/><text x="${L - 5}" y="${Y(v) + 3}" text-anchor="end">${v}</text>`).join("");
+  let gi = 0, last = [-1, -1];
+  $("pips").innerHTML = G.map(() => "<i></i>").join("");
+  function show(k) {
+    const g = G[k], n = g.path.length, b = g.path.map((v) => 100 - v);
+    $("rmeta").textContent = `${g.league} · ${g.date}`;
+    $("tA").querySelector(".nm").textContent = g.a; $("tB").querySelector(".nm").textContent = g.b;
+    $("pips").querySelectorAll("i").forEach((p, j) => p.classList.toggle("on", j === k));
+    $("rnote").innerHTML = g.two ? "Real Kalshi prices, replayed." : "Real Kalshi prices, replayed (a draw is also possible).";
+    const path = (arr, upto) => arr.slice(0, upto + 1).map((v, i) => `${i ? "L" : "M"}${X(i, n).toFixed(1)},${Y(v).toFixed(1)}`).join("");
+    const draw = (upto) => {
+      upto = Math.max(0, Math.min(n - 1, upto | 0));
+      $("rsvg").innerHTML = grid + `<text x="${W - R}" y="${Ht - 5}" text-anchor="end">${g.mins} min</text><text x="${L}" y="${Ht - 5}">start</text>`
+        + `<path d="${path(b, upto)}" fill="none" stroke="var(--ink-3)" stroke-width="1.6" opacity="${g.two ? .8 : 0}"/>`
+        + `<path d="${path(g.path, upto)}" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linejoin="round"/>`
+        + `<circle cx="${X(upto, n)}" cy="${Y(g.path[upto])}" r="4.5" fill="var(--accent)" stroke="var(--sheet)" stroke-width="2"/>`;
+      const pa = g.path[upto], pb = g.two ? 100 - pa : null;
+      for (const [el, v, j] of [[$("tA"), pa, 0], [$("tB"), pb, 1]]) {
+        if (v == null) { el.querySelector(".px").textContent = "—"; el.querySelector(".od").textContent = ""; continue; }
+        if (v !== last[j]) { scramble(el.querySelector(".px"), v + "¢", 160); el.querySelector(".od").textContent = odds(v); last[j] = v; }
+      }
+      $("tA").classList.toggle("lead", pa > 50); $("tB").classList.toggle("lead", pb != null && pb > 50);
+    };
+    if (calm) { draw(n - 1); $("rnote").innerHTML = `Final: <b>${esc(g.winner || "draw")}</b>`; return; }
+    const t0 = performance.now(), dur = 6500;
+    const step = (now) => { const k2 = Math.min(1, (now - t0) / dur), upto = Math.round(k2 * (n - 1)); draw(upto);
+      if (k2 < 1) requestAnimationFrame(step);
+      else { $("rnote").innerHTML = `Final: <b>${esc(g.winner || "draw")}</b> ${g.winner ? "won" : ""}`; setTimeout(() => { gi = (gi + 1) % G.length; last = [-1, -1]; show(gi); }, 2200); } };
+    requestAnimationFrame(step);
+  }
+  show(0);
+  $("built").textContent = `Data built ${H.built}.`;
+})();
+</script>
