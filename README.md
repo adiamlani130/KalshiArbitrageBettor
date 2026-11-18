@@ -15,7 +15,7 @@ This project tests well-known sports "trends" against real Kalshi prediction-mar
 | Page | What it's for |
 |---|---|
 | [Home](https://adiamlani130.github.io/KalshiArbitrageBettor/app/) | What the lab is, real games replayed price by price, and the headline results |
-| [Strategy builder](https://adiamlani130.github.io/KalshiArbitrageBettor/app/sports.html) | Build and test any betting rule on 16,930 games across 14 leagues. Every strategy is a shareable link; save strategies and compare them side by side; sweep a threshold to check it isn't luck |
+| [Strategy builder](https://adiamlani130.github.io/KalshiArbitrageBettor/app/sports.html) | Build and test any betting rule on 16,834 games across 14 leagues. Every strategy is a shareable link; save strategies and compare them side by side; sweep a threshold to check it isn't luck |
 | [Case studies](https://adiamlani130.github.io/KalshiArbitrageBettor/app/research.html) | The three original studies (tennis set 1, NBA halftime favorites, NBA comebacks) with real scores, ready to load and tweak |
 | [Markets vs stocks](https://adiamlani130.github.io/KalshiArbitrageBettor/app/stocks.html) | 336 Kalshi markets against 242 stocks and ETFs: who moves first, lag trades, hourly shocks, announcements, earnings calls |
 | [Strategies & hedging](https://adiamlani130.github.io/KalshiArbitrageBettor/app/strategies.html) | Kalshi vs options-implied odds, merger spreads, second-order baskets, hedging a stock with a contract |
@@ -60,20 +60,16 @@ The two positive NBA results have small samples: 161 and 77 bets. The Edge Lab's
 
 Full tables (35+ strategies, including back-to-backs, runs and line movement) are in `results/`.
 
-- **Strategies & hedging.** Six less obvious tests: Kalshi against options-implied odds, a merger spread against Kalshi's deal odds, baskets of second-order stocks, hedging a stock with a contract, trading the contract after the stock moves, and betting the ladder before macro news.
-
-- **Findings.** What is left after a computer tries 1,630 betting rules and 2,621 market-stock pairs, finding each on one period and testing it once on a later one.
-
 ## What survived out of sample
 
 Two searches hunted for betting strategies, and both judged every idea on games it was never fitted to. Neither found one that holds up. That is the headline result: after fees, Kalshi's sports prices are hard to beat with any rule built from prices alone.
 
-**Machine search** (`analysis/evolve.py`). Every game becomes a set of decision points: an hour before the start, just before it, and every 10 minutes during it (5 for UFC), for each side. That gives 471,196 moments in 16,930 games, each carrying only what was known then and the price you'd actually pay. Games are split by date: the first 55% to search, the next 20% to choose ("validation"), and the last 25% held back and used once ("test").
+**Machine search** (`analysis/evolve.py`). Every game becomes a set of decision points: an hour before the start, just before it, and every 10 minutes during it (5 for UFC), for each side. That gives 471,196 moments in 16,834 games, each carrying only what was known then and the price you'd actually pay. Games are split by date: the first 55% to search, the next 20% to choose ("validation"), and the last 25% held back and used once ("test").
 
 | Method | What it tried | Result on games it never saw |
 |---|---|---|
-| Genetic algorithm | 35,589 readable rules, evolved over 6 islands × 80 generations | 1,700 were clearly profitable on the search games; 0 still were on validation; 0 confirmed on the test |
-| NEAT neural networks | 40 evolved networks deciding moment by moment | Best on validation: +18.3% on search games, +1.3% on validation, −16.3% on the test (541 bets) |
+| Genetic algorithm | 113,916 readable rules, evolved over 6 islands × 80 generations | 5,734 were clearly profitable on the search games; 0 still were on validation; 0 confirmed on the test |
+| NEAT neural networks | 20,000 evolved networks deciding moment by moment | Best on validation: +2.4% on search games, +1.3% on validation, +0.4% on the test (280 bets) |
 | Gradient boosting | A model predicting who wins, betting when it disagrees with the price | Forecast error 0.1717 vs Kalshi's own price 0.1684 (lower is better); its bets returned −6.8% on the test |
 
 **Grid search** (`analysis/discover.py`). A fixed grid of 1,626 rules, each found on the first 60% of a league's games and tested once on the last 40% with a 10% false-discovery rate.
@@ -86,7 +82,7 @@ Two searches hunted for betting strategies, and both judged every idea on games 
 | Kalshi leading the stock by a day | 2,621 | 15 | 0 |
 | The stock leading Kalshi by a day | 2,606 | 13 | 0 |
 
-- **Overfitting is easy to see.** The best NEAT network made +18.3% on the games it evolved on and −16.3% on the test. Thousands of rules look profitable on the search games; none carry over.
+- **Overfitting is easy to see.** Thousands of rules look profitable on the search games and none carry over. An earlier, smaller NEAT run's best network made +18.3% on the games it evolved on and −16.3% on the test; in the full run the best network broke even (+0.4% on 280 test bets).
 - **The market forecasts better than the model.** Trained on the same information a bettor has, a gradient-boosted model was a worse forecaster of who wins than the Kalshi price.
 - **Losing is repeatable.** Backing whoever is behind on price an hour into a game lost 12.9% in the search period and 16.1% on 5,936 held-back bets across all 14 leagues. Long shots are overpriced in every sport.
 - **Prediction markets and stocks move together, and neither leads.** Same-day links replicate; next-day leads in either direction do not.

@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <title>Strategy Search</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="What survived: 1,630 betting rules and 2,621 market-stock pairs, each found on one period and tested once on another.">
+<meta name="description" content="What survived: over 100,000 machine-searched betting strategies, a grid of betting rules and 2,621 market-stock pairs, each found on one period and tested once on another.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="style.css">
@@ -46,7 +46,7 @@
   $("out").innerHTML = `<div style="display:grid;gap:22px">
     <p class="headline">Almost nothing makes money. <b>${s.candidates.length}</b> of ${s.tested.toLocaleString()} rules looked profitable in the search period, fewer than the roughly ${Math.round(s.tested * 0.0228)} luck alone would produce, and <b>${ok.length}</b> held up on the held-back games. What does hold up is the way to <i>lose</i>: <b>${s.n_losers}</b> rules lost clearly in both periods, nearly all of them bets on the team that is behind.</p>
     <div class="tiles">${tile("Rules tried", s.tested.toLocaleString())}${tile("Looked profitable", s.candidates.length)}${tile("Held up", ok.length, "pos")}${tile("Lost in both periods", s.n_losers, "neg")}${tile("Same direction both periods", Math.round(s.agree / s.tested * 100) + "%")}${tile("Market-stock links that held", `${same.replicated} of ${same.found}`)}</div>
-    <div id="grid"><h2>Grid search: 1,630 rules found on 60% of games, tested on the other 40%</h2></div>
+    <div id="grid"><h2>Grid search: ${s.tested.toLocaleString()} rules found on 60% of games, tested on the other 40%</h2></div>
     <div><h2>1. Sports rules that looked profitable</h2><p class="note" style="margin:6px 0 10px">Green held up on the held-back games after correcting for the number of rules tried. Treat even those as leads to keep watching, not money in the bank.</p>${table(head, s.candidates.map((r) => row(r)))}</div>
     <div><h2>2. Every rule, search period vs held-back period</h2><p class="note" style="margin:6px 0 10px">Each grey dot is one rule: its return when it was searched for (across) and on the later games (up). Dots in the lower left lost twice. The top right, where real edges would sit, is nearly empty. Coloured dots are the rules from the table above.</p>${plot}</div>
     <div><h2>3. The reliable way to lose</h2><p class="note" style="margin:6px 0 10px">The strongest repeatable pattern in the data: backing whoever is behind, or fading a team that has reached 90¢, loses in both periods. Prices on long shots are too high. The other side of these bets is not automatically profitable, because the fee and the bid/ask spread eat the gap.</p>${table(head, s.losers.map((r) => row(r, true)))}</div>
