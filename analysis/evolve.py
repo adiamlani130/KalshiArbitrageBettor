@@ -25,6 +25,7 @@ import engine as E
 
 QUICK = "--quick" in sys.argv
 SPLITS = (0.55, 0.75)
+NEAT_POP, NEAT_GENS = (60, 10) if QUICK else (250, 80)     # networks per generation, generations
 MIN_TRAIN, MIN_VALID, MIN_TEST = 200, 60, 40
 DUR = {"nfl": 190, "ncaaf": 205, "nba": 150, "wnba": 125, "ncaab": 125, "mlb": 170, "nhl": 155, "epl": 115, "ucl": 115,
        "laliga": 115, "mls": 115, "ufc": 25, "atp": 110, "wta": 100}
@@ -426,14 +427,14 @@ def main():
         g = R.random(); rows = first_bets(T, R.mask(g)); s = stats(T["net"][rows[T["period"][rows] == 2]])
         if s["n"] >= MIN_TEST: null.append(round(s["roi"], 4))
     # NEAT
-    neat_out, _ = run_neat(T, 60 if QUICK else 250, 10 if QUICK else 80, 5)
+    neat_out, _ = run_neat(T, NEAT_POP, NEAT_GENS, 5)
     nv = [x for x in neat_out if x["valid"]["n"] >= MIN_VALID]
     nbest = max(nv, key=lambda x: x["valid"]["t"]) if nv else None
     neat_res = None
     if nbest:
         neat_res = dict(nodes=nbest["nodes"], conns=nbest["conns"], train=nbest["train"], valid=nbest["valid"], test=nbest["test"],
                         confirmed=nbest["test"]["t"] >= 2 and nbest["test"]["n"] >= MIN_TEST, curve=curve(T, nbest["rows"]),
-                        evolved=len(neat_out), best_train=[dict(train=x["train"], valid=x["valid"]) for x in neat_out[:12]])
+                        evolved=NEAT_POP * NEAT_GENS, best_train=[dict(train=x["train"], valid=x["valid"]) for x in neat_out[:12]])
         log(f"NEAT best by validation: train {nbest['train']['roi']:+.1%} valid {nbest['valid']['roi']:+.1%} test {nbest['test']['roi']:+.1%} ({nbest['test']['n']} bets)")
     # GBM
     gbm, grows = run_gbm(T); gbm["curve"] = curve(T, grows)
