@@ -71,15 +71,16 @@ function renderMachine(V, h) {
   const spark = (c) => { if (!c || c.length < 2) return ""; const lo = Math.min(0, ...c), hi = Math.max(0, ...c), W = 140, H = 34, X = (i) => W * i / (c.length - 1), Y = (v) => H - 2 - (H - 4) * (v - lo) / ((hi - lo) || 1);
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true"><line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)"/><path d="${c.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join("")}" fill="none" stroke="${c[c.length - 1] >= 0 ? "var(--good)" : "var(--bad)"}" stroke-width="1.6"/></svg>`; };
   const per = (x) => `<td class="n ${cls(x.roi)}">${pct(x.roi)}</td><td class="n">${fmt(x.n)}</td>`;
-  const rules = table([["Strategy found by the genetic algorithm", "wrap"], ["Search", "n"], ["Bets", "n"], ["Validation", "n"], ["Bets", "n"], ["Test", "n"], ["Bets", "n"], ["Test curve"], ["Verdict"]],
-    V.rules.map((r) => `<tr><td class="wrap">${esc(r.rule)}</td>${per(r.train)}${per(r.valid)}${per(r.test)}<td>${spark(r.curve)}</td><td>${r.confirmed ? '<span class="pill good"><i>Confirmed</i></span>' : r.test.roi > 0 ? "Weaker on test" : '<span class="neg">Failed on test</span>'}</td></tr>`));
+  const nearOnly = V.rules.length && V.rules.every((r) => !r.validated);
+  const rules = (nearOnly ? `<p class="compare">No rule held up on the validation games, so none was sent to the test. Below are the closest calls: the best rules on the search games that were also best on validation. Their test results are shown for interest only.</p>` : "") + table([["Strategy found by the genetic algorithm", "wrap"], ["Search", "n"], ["Bets", "n"], ["Validation", "n"], ["Bets", "n"], ["Test", "n"], ["Bets", "n"], ["Test curve"], ["Verdict"]],
+    V.rules.map((r) => `<tr><td class="wrap">${esc(r.rule)}</td>${per(r.train)}${per(r.valid)}${per(r.test)}<td>${spark(r.curve)}</td><td>${r.confirmed ? '<span class="pill good"><i>Confirmed</i></span>' : !r.validated ? '<span class="neg">Failed validation</span>' : r.test.roi > 0 ? "Weaker on test" : '<span class="neg">Failed on test</span>'}</td></tr>`));
   // where real rules land against random ones on the test games
   const nul = V.null || [], lo = -0.6, hi = 0.4, bins = 40, cnt = new Array(bins).fill(0);
   nul.forEach((v) => cnt[Math.max(0, Math.min(bins - 1, Math.floor((v - lo) / (hi - lo) * bins)))]++);
   const W = 680, H = 170, L = 10, R = 10, T = 10, B = 26, mxc = Math.max(...cnt, 1), X = (v) => L + (W - L - R) * (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo);
   const hist = `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Test-game returns of random rules, with the evolved rules marked">
     ${cnt.map((c, i) => `<rect x="${X(lo + (hi - lo) * i / bins) + 1}" y="${H - B - (H - T - B) * c / mxc}" width="${(W - L - R) / bins - 2}" height="${(H - T - B) * c / mxc}" fill="var(--market)" opacity=".5"/>`).join("")}
-    ${V.rules.map((r) => `<line x1="${X(r.test.roi)}" x2="${X(r.test.roi)}" y1="${T}" y2="${H - B}" stroke="${r.confirmed ? "var(--good)" : "var(--accent)"}" stroke-width="2"><title>${esc(r.rule)}: ${pct(r.test.roi)}</title></line>`).join("")}
+    ${V.rules.filter((r) => r.validated || nearOnly).map((r) => `<line x1="${X(r.test.roi)}" x2="${X(r.test.roi)}" y1="${T}" y2="${H - B}" stroke="${r.confirmed ? "var(--good)" : "var(--accent)"}" stroke-width="2"><title>${esc(r.rule)}: ${pct(r.test.roi)}</title></line>`).join("")}
     <line x1="${X(0)}" x2="${X(0)}" y1="${T}" y2="${H - B}" stroke="var(--ink)" stroke-dasharray="3 3"/>
     ${[-0.5, -0.25, 0, 0.25].map((t) => `<text x="${X(t)}" y="${H - 8}" text-anchor="middle">${pct(t, 0)}</text>`).join("")}</svg></div>`;
   const nt = V.neat, gb = V.gbm, b = V.baselines || {};
@@ -89,7 +90,7 @@ function renderMachine(V, h) {
     <p class="headline">Three machine-learning searches looked for in-game betting strategies across <b>${fmt(V.points)}</b> moments in <b>${fmt(V.games)}</b> games. Games were split by date: searched on ${V.dates[0]} to ${V.dates[1]}, chosen on ${V.dates[1]} to ${V.dates[2]}, and tested once on ${V.dates[2]} to ${V.dates[3]}.</p>
     <div><h2>1. A genetic algorithm evolving readable rules</h2><p class="note" style="margin:6px 0 12px">Each rule picks a moment (before the start or a stretch of the game), a sport or league, a price range and up to three conditions. The fittest rules on the search games bred and mutated for many generations.</p>${funnel}</div>
     ${rules}
-    <div><h3 style="margin-bottom:6px">Against luck</h3><p class="note" style="margin-bottom:8px">Grey bars: how ${fmt(nul.length)} random rules did on the test games. Lines: the rules sent to the test (green if confirmed). A real edge should sit clearly to the right of the grey hill and of zero.</p>${hist}</div>
+    <div><h3 style="margin-bottom:6px">Against luck</h3><p class="note" style="margin-bottom:8px">Grey bars: how ${fmt(nul.length)} random rules did on the test games. Lines: the rules shown above (green if confirmed). A real edge should sit clearly to the right of the grey hill and of zero.</p>${hist}</div>
     <div class="studies">
       ${nt ? card(`2. NEAT: evolved neural networks`, `<p>${fmt(nt.evolved)} networks evolved (NeuroEvolution of Augmenting Topologies) to decide, moment by moment, whether to bet. The best on the validation games has ${nt.nodes} nodes and ${nt.conns} connections.</p>${mini(nt)}<p>${nt.confirmed ? "It held up on the test games." : "It did not hold up clearly on the test games."} ${nt.test.n} test bets.</p>${spark(nt.curve)}`) : ""}
       ${gb ? card(`3. Gradient boosting vs the market`, `<p>A model trained on the search games to predict who wins, from the same information a bettor has. Lower error is better.</p>

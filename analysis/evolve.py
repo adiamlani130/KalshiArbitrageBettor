@@ -384,7 +384,7 @@ def main():
     t0 = time.time(); T = build_table()
     log(f"{len(T['net']):,} decision points from {T['ngames']:,} games; split dates {T['dates']}")
     # GA: several independent islands with different seeds
-    islands = [(1, 160, 25, 2000)] if QUICK else [(s, 300, 60, 6000) for s in (1, 2, 3)]
+    islands = [(1, 160, 25, 2000)] if QUICK else [(s, 400, 80, 10000) for s in range(1, 7)]
     pool = {}
     for seed, pn, gens, rn in islands:
         R = run_ga(T, seed, pn, gens, rn); pool.update(R.cache)
@@ -405,8 +405,20 @@ def main():
         chosen.append((per, g, rows, gs))
         if len(chosen) >= 25: break
     passed = {k for k in bh([c[0][2]["p"] if c[0][2]["n"] >= MIN_TEST else 1.0 for c in chosen], q=0.05) if chosen[k][0][2]["t"] >= 2}
-    rules = [dict(rule=describe(T, g), train=per[0], valid=per[1], test=per[2], confirmed=k in passed, curve=curve(T, rows))
+    rules = [dict(rule=describe(T, g), train=per[0], valid=per[1], test=per[2], confirmed=k in passed, validated=True, curve=curve(T, rows))
              for k, (per, g, rows, _) in enumerate(chosen)]
+    # Near misses: the best of the rest by validation alone, shown so you can see how close anything came.
+    # They were not sent to the test, so their test numbers are for display only and don't count in the correction.
+    near = []
+    for fit, s_, g in ranked[:400]:
+        rows = first_bets(T, R.mask(g)); per = by_period(T, rows)
+        if per[1]["n"] < MIN_VALID or any(r["rule"] == describe(T, g) for r in rules): continue
+        gs = set(T["gid"][rows].tolist())
+        if any(len(gs & o) / max(1, len(gs | o)) > 0.6 for _, _, o in near): continue
+        near.append((per, g, gs))
+    near.sort(key=lambda x: -x[0][1]["t"])
+    rules += [dict(rule=describe(T, g), train=per[0], valid=per[1], test=per[2], confirmed=False, validated=False, curve=curve(T, first_bets(T, R.mask(g))))
+              for per, g, _ in near[:max(0, 15 - len(rules))]]
     log(f"GA: {len(cand)} validated, {len(chosen)} sent to test, {len(passed)} confirmed")
     # null distribution: what random rules do on the test games
     rnd = random.Random(99); null = []
@@ -414,7 +426,7 @@ def main():
         g = R.random(); rows = first_bets(T, R.mask(g)); s = stats(T["net"][rows[T["period"][rows] == 2]])
         if s["n"] >= MIN_TEST: null.append(round(s["roi"], 4))
     # NEAT
-    neat_out, _ = run_neat(T, 60 if QUICK else 150, 10 if QUICK else 50, 5)
+    neat_out, _ = run_neat(T, 60 if QUICK else 250, 10 if QUICK else 80, 5)
     nv = [x for x in neat_out if x["valid"]["n"] >= MIN_VALID]
     nbest = max(nv, key=lambda x: x["valid"]["t"]) if nv else None
     neat_res = None
