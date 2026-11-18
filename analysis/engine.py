@@ -37,9 +37,13 @@ def decode(s, code):
     return out
 
 def clean(bid, ask):
-    """An empty book (bid 0, ask 100) is not a price: carry the last real quote forward."""
-    for i in range(1, len(bid)):
-        if bid[i] is None or ask[i] is None or ask[i] - bid[i] > 30: bid[i], ask[i] = bid[i - 1], ask[i - 1]
+    """An empty book (bid 0, ask 100) or a missing quote is not a price. Carry the last real quote forward for
+    display and triggers, and return which samples had a live two-sided quote: only those can be traded."""
+    live = [False] * len(bid)
+    for i in range(len(bid)):
+        if bid[i] is not None and ask[i] is not None and ask[i] - bid[i] <= 30: live[i] = True
+        elif i: bid[i], ask[i] = bid[i - 1], ask[i - 1]
+    return live
 
 def load(league, idx=None):
     idx = idx or index(); meta = idx["leagues"][league]
@@ -48,11 +52,11 @@ def load(league, idx=None):
     games = []
     for r in t["rows"]:
         g = lambda k: r[ix[k]]
-        ab, aa = decode(g("b"), code), decode(g("a"), code); clean(ab, aa)
+        ab, aa = decode(g("b"), code), decode(g("a"), code); la = clean(ab, aa)
         if meta["three"]:
-            bb, ba = decode(g("Bb"), code), decode(g("Ba"), code); clean(bb, ba)
+            bb, ba = decode(g("Bb"), code), decode(g("Ba"), code); lb = clean(bb, ba)
         else:
-            bb, ba = [None if v is None else 100 - v for v in aa], [None if v is None else 100 - v for v in ab]
+            bb, ba = [None if v is None else 100 - v for v in aa], [None if v is None else 100 - v for v in ab]; lb = la
         def pair(k):
             a = g(k)
             if not a: return None
@@ -64,7 +68,7 @@ def load(league, idx=None):
         et = datetime.fromtimestamp(g("ts"), timezone.utc) - timedelta(hours=5)      # close enough to New York for a date
         games.append(dict(league=league, sport=meta["sport"], step=meta["step"], date=et.strftime("%Y-%m-%d"), ts=g("ts"),
                           names=[g("A"), g("B")], home=0 if g("home") else None, win=-1 if g("draw") else (0 if g("won") else 1),
-                          pre=pre, h1=pair("h1"), fav=0 if mid(pre[0]) >= mid(pre[1]) else 1, bid=[ab, bb], ask=[aa, ba], n=len(aa)))
+                          pre=pre, h1=pair("h1"), fav=0 if mid(pre[0]) >= mid(pre[1]) else 1, bid=[ab, bb], ask=[aa, ba], live=[la, lb], n=len(aa), pvol=g("pvol")))
     return games
 
 def mid_at(g, s, i):
@@ -109,14 +113,16 @@ def bet(g, moment, side, **p):
     else:
         hit = find(g, moment, **p)
         if not hit: return None
-        i, trig = hit; e = i + 1
-        if e >= g["n"]: return None
+        i, trig = hit
         if side in ("leader", "trailer"):
             a, b = mid_at(g, 0, i), mid_at(g, 1, i)
             if a is None or b is None or a == b: return None
             s = 0 if (a > b) == (side == "leader") else 1
         else:
             s = {"trig": trig, "other": 1 - trig, "fav": g["fav"], "dog": 1 - g["fav"]}[side]
+        # fill at the first live quote 1-3 samples after the rule is seen; never at a stale or empty book
+        e = next((j for j in range(i + 1, min(g["n"], i + 4)) if g["live"][s][j]), None)
+        if e is None: return None
         price = g["ask"][s][e]
     if price is None or not 2 <= price <= 98: return None
     return price / 100, g["win"] == s, s

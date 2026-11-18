@@ -112,3 +112,32 @@ pre.code { background: var(--bg); border: 1px solid var(--line); border-radius: 
 .field { grid-template-columns: minmax(0, 1fr) }
 .sheet > *, #view > div, #view > div > * { min-width: 0 }
 .sheet > div > * { min-width: 0 }
+
+/* ---------- site bar (nav.js) ---------- */
+body { padding-top: 0 }
+.sitebar { position: sticky; top: 0; z-index: 20; margin: 0 -16px 20px; padding: 0 16px; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line) }
+.sitebar-in { max-width: 1240px; margin: 0 auto; display: flex; align-items: center; gap: 18px; min-height: 54px }
+.brand { font: 800 16px var(--display); color: var(--ink); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap }
+.brandmark { width: 18px; height: 18px; border-radius: 5px; background: linear-gradient(135deg, var(--accent), var(--good)); display: inline-block }
+.sitenav { display: flex; align-items: center; gap: 2px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0 }
+.sitenav::-webkit-scrollbar { display: none }
+.sitenav a { font: 500 13.5px var(--body); color: var(--ink-2); text-decoration: none; padding: 7px 10px; border-radius: 8px; white-space: nowrap }
+.sitenav a:hover { color: var(--ink); background: var(--line-2) }
+.sitenav a[aria-current="page"] { color: var(--ink); background: var(--sheet); box-shadow: inset 0 0 0 1px var(--line) }
+.navgroup { font: 500 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding: 0 4px 0 12px; white-space: nowrap }
+.navgroup:first-of-type { padding-left: 4px }
+.gh { font: 500 13px var(--body); color: var(--ink-3); text-decoration: none; white-space: nowrap }
+.gh:hover { color: var(--ink) }
+@media (max-width: 720px) { .gh, .navgroup { display: none } .sitebar-in { gap: 10px } }
+.studies { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+@media (max-width: 900px) { .studies { grid-template-columns: minmax(0, 1fr) } }
+.study { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start }
+.study .big { font: 500 28px var(--mono); }
+.study p { font-size: 14px; color: var(--ink-2) }
+
+[hidden] { display: none !important }
+.wrap { grid-template-columns: minmax(0, 1fr) }
+.wrap > * { min-width: 0 }
+.cta-tab { font: 600 13px var(--body); color: var(--ink-2); text-decoration: none; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--sheet) }
+.cta-tab:hover { color: var(--ink) }
+.sheet + .sheet { margin-top: 0 }

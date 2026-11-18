@@ -1,7 +1,11 @@
 (function () {
-  const DS = window.DATASETS, $ = (id) => document.getElementById(id);
+  const ALL = window.DATASETS, $ = (id) => document.getElementById(id);
+  // Two pages share this engine: the strategy builder (all-sports price paths) and the case studies (the original research).
+  const MODE = document.body.dataset.mode === "build" ? "build" : "research";
+  const DS = Object.fromEntries(Object.entries(ALL).filter(([k]) => (MODE === "build") === (k === "paths")));
+  const PRESETS = window.PRESETS.map((p, i) => Object.assign({ i }, p)).filter((p) => DS[p.ds]);
   const STAKE = 10;
-  const S = { ds: "tennis", moment: null, side: null, pmin: 1, pmax: 99, filters: [], from: "", to: "",
+  const S = { ds: Object.keys(DS)[0], moment: null, side: null, pmin: 1, pmax: 99, filters: [], from: "", to: "",
               take: "all", n: 1000, seed: 1, tab: "bet", x: null, bins: 5, preset: null, params: {}, exit: {} };
 
   // ---------------------------------------------------------------- math
@@ -23,6 +27,21 @@
   const val = (b, k) => (b.x && k in b.x ? b.x[k] : b.r[k]);
   const fmtVal = (c, v) => v == null ? "—" : c.type === "bool" ? (v ? "Yes" : "No") : c.pct ? (v * 100).toFixed(0) + "¢" : typeof v === "number" ? +v.toFixed(1) : v;
 
+  // ---------------------------------------------------------------- the strategy as a link, and saved strategies
+  const KEYS = ["ds", "moment", "side", "pmin", "pmax", "filters", "from", "to", "take", "n", "seed", "params", "exit"];
+  const snapshot = () => { const o = {}; KEYS.forEach((k) => (o[k] = S[k])); if (ds().leagues) o.on = ds().leagues.filter((l) => ds().on[l]); return o; };
+  function restore(o) {
+    if (!o || !DS[o.ds]) return false;
+    KEYS.forEach((k) => { if (o[k] !== undefined) S[k] = JSON.parse(JSON.stringify(o[k])); });
+    if (o.on && DS[o.ds].leagues) DS[o.ds].leagues.forEach((l) => (DS[o.ds].on[l] = o.on.includes(l)));
+    S.preset = null; return true;
+  }
+  const toHash = () => { try { history.replaceState(null, "", "#" + encodeURIComponent(JSON.stringify(snapshot()))); } catch (e) {} };
+  const fromHash = () => { try { return location.hash.length > 1 && restore(JSON.parse(decodeURIComponent(location.hash.slice(1)))); } catch (e) { return false; } };
+  const STORE = "edgelab-saved-" + MODE;
+  const saved = () => { try { return JSON.parse(localStorage.getItem(STORE) || "[]"); } catch (e) { return []; } };
+  const setSaved = (a) => { try { localStorage.setItem(STORE, JSON.stringify(a)); } catch (e) {} };
+
   // ---------------------------------------------------------------- sample → filters → bets
   function sample() {
     let rows = ds().rows.filter((r) => (!S.from || r.date >= S.from) && (!S.to || r.date <= S.to));
@@ -40,7 +59,8 @@
     const lo = f.min === "" || f.min == null ? -Infinity : +f.min, hi = f.max === "" || f.max == null ? Infinity : +f.max;
     return c.type === "date" ? (!f.min || v >= f.min) && (!f.max || v <= f.max) : v >= lo && v <= hi;
   }
-  function bets(rows) {
+  function bets(rows, over) {
+    if (over) { const keep = {}; KEYS.forEach((k) => (keep[k] = S[k])); Object.assign(S, over); try { return bets(rows); } finally { Object.assign(S, keep); } }
     const out = [], stat = S.filters.filter((f) => !(col(f.key) || {}).dyn), dyn = S.filters.filter((f) => (col(f.key) || {}).dyn);
     for (const r of rows) {
       if (!stat.every((f) => passes(r[f.key], f))) continue;
@@ -69,11 +89,12 @@
   function fillSelect(el, items, val) { el.innerHTML = items.map((i) => `<option value="${esc(i.id)}"${i.id === val ? " selected" : ""}>${esc(i.label)}</option>`).join(""); }
   function renderDatasetButtons() {
     $("dataset").innerHTML = Object.entries(DS).map(([k, d]) => `<button aria-pressed="${k === S.ds}" data-ds="${k}">${esc(d.label)}</button>`).join("");
+    $("dataset").hidden = Object.keys(DS).length < 2;
   }
   function renderPresets() {
     const groups = {};
     PRESETS.forEach((p, i) => (groups[p.ds] = groups[p.ds] || []).push(`<option value="${i}"${S.preset === i ? " selected" : ""}>${esc(p.label)}</option>`));
-    $("preset").innerHTML = `<option value="">Load a strategy from the research…</option>` +
+    $("preset").innerHTML = `<option value="">${MODE === "build" ? "Load an example strategy…" : "Load a strategy from the research…"}</option>` +
       Object.entries(groups).map(([k, o]) => `<optgroup label="${esc(DS[k].label)}">${o.join("")}</optgroup>`).join("");
   }
   function catValues(key) {
@@ -123,7 +144,7 @@
     $("xcol").innerHTML = d.cols.filter((c) => c.type !== "date" && c.type !== "text").map((c) =>
       `<option value="${c.key}"${c.key === S.x ? " selected" : ""}>${esc(c.label)}${c.at > momentAt() ? " (after your bet)" : ""}</option>`).join("");
     $("bins").value = S.bins;
-    for (const t of ["bet", "link", "scan"]) { $("tab-" + t).setAttribute("aria-selected", S.tab === t); $("view-" + t).hidden = S.tab !== t; }
+    for (const t of ["bet", "link", "scan", "mine"]) { $("tab-" + t).setAttribute("aria-selected", S.tab === t); $("view-" + t).hidden = S.tab !== t; }
   }
 
   // ---------------------------------------------------------------- charts (plain SVG)
@@ -226,6 +247,7 @@
       <div class="pills"><span class="pill ${luck[0]}"><i>${luck[1]}</i> ${luck[2]}</span>
         <span class="pill ${halves[0]}"><i>${halves[1]}</i> ${st.n >= 20 ? `${esc(st.d1)} → ${esc(st.d2)}: ${pct(st.r1)} · ${esc(st.d2)} → ${esc(st.d3)}: ${pct(st.r2)}` : ""}</span></div>
       <div><h3 style="margin-bottom:8px">Running profit, bet by bet</h3>${pnlChart(B)}</div>
+      ${SWEEP[S.moment] ? `<div id="sweepout"><button class="btn" id="sweep">Check sensitivity: rerun at other thresholds</button></div>` : ""}
       <div class="grid2">
         <div><h3 style="margin-bottom:8px">By the price you paid</h3><div class="tablewrap"><table><thead><tr><th>Price</th><th class="n">Bets</th><th class="n">Won</th><th class="n">Return</th></tr></thead><tbody>${buckets}</tbody></table></div>
           <p class="hint" style="margin-top:8px">Long shots (cheap prices) usually lose more than favorites. That's the favorite-longshot bias.</p></div>
@@ -295,6 +317,38 @@
       </tbody></table></div>
       <p class="hint">“Add” puts that condition on your bet so you can see the profit curve in <b>Test a bet</b>. Only conditions you would know at the moment you bet are tried.</p></div>`;
   }
+  // Sensitivity: rerun the strategy across a range of thresholds. A real edge changes smoothly; a lucky one is a spike.
+  const SWEEP = { below: [10, 90, 10], above: [50, 95, 5], drop: [5, 45, 5], rise: [5, 45, 5], crash: [5, 40, 5], spike: [5, 40, 5], t: [10, 170, 20] };
+  function sweepHTML(rows) {
+    const key = S.moment === "t" ? "t" : "x", sw = SWEEP[S.moment]; if (!sw) return "";
+    const G = [];
+    for (let v = sw[0]; v <= sw[1]; v += sw[2]) { const st = stats(bets(rows, { params: Object.assign({}, S.params, { [key]: v }) })); if (st) G.push({ v, st }); }
+    if (!G.length) return "";
+    const W = 640, H = 200, L = 46, R = 10, T = 12, Bm = 34, m = Math.max(0.05, ...G.map((g) => Math.abs(g.st.roi))) * 1.15, bw = (W - L - R) / G.length;
+    const Y = (v) => T + (H - T - Bm) * (1 - (v + m) / (2 * m)), cur = +S.params[key];
+    const bars = G.map((g, i) => { const y = Math.min(Y(g.st.roi), Y(0)), h = Math.max(1, Math.abs(Y(g.st.roi) - Y(0)));
+      return `<rect x="${L + i * bw + bw * .18}" y="${y}" width="${bw * .64}" height="${h}" rx="3" fill="${g.v === cur ? "var(--accent)" : g.st.roi >= 0 ? "var(--good)" : "var(--bad)"}" opacity="${g.v === cur ? 1 : .55}"><title>${g.v}: ${pct(g.st.roi)} on ${g.st.n} bets</title></rect>
+        <text x="${L + i * bw + bw / 2}" y="${H - 18}" text-anchor="middle">${g.v}</text><text x="${L + i * bw + bw / 2}" y="${H - 5}" text-anchor="middle">n=${g.st.n}</text>`; }).join("");
+    const grid = [-m, -m / 2, 0, m / 2, m].map((t) => `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line-2)"/><text x="${L - 6}" y="${Y(t) + 4}" text-anchor="end">${pct(t, 0)}</text>`).join("");
+    return `<div><h3 style="margin-bottom:6px">Sensitivity: the same strategy at other thresholds</h3>
+      <div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Return at each threshold">${grid}${bars}</svg></div>
+      <p class="hint">Highlighted bar is your setting (${esc(moment().params.find((q) => q.id === key).label.toLowerCase())}). If only one bar looks good and its neighbors don't, it is probably luck.</p></div>`;
+  }
+  function renderMine(rows) {
+    const list = saved(), v = $("view-mine");
+    const rowsHTML = list.map((o, i) => { const same = o.s.ds === S.ds, st = same ? stats(bets(rows, o.s)) : null;
+      return `<tr><td class="wrap"><b>${esc(o.name)}</b><br><span class="hint">${esc(o.desc)}</span></td>
+        <td class="n">${st ? st.n : "—"}</td><td class="n ${st ? (st.roi >= 0 ? "pos" : "neg") : ""}">${st ? pct(st.roi) : "—"}</td><td class="n">${st ? `${pct(st.lo, 0)} to ${pct(st.hi, 0)}` : same ? "no bets" : "other dataset"}</td>
+        <td class="n">${st && st.n >= 20 ? `${pct(st.r1, 0)} / ${pct(st.r2, 0)}` : "—"}</td><td><button class="btn" data-load="${i}">Load</button> <button class="btn" data-del="${i}">Delete</button></td></tr>`; }).join("");
+    v.innerHTML = `<div style="display:grid;gap:14px">
+      <p class="headline">Save strategies as you go and compare them side by side on the same games.</p>
+      <div class="controls"><label class="field"><span>Name for the current strategy</span><input type="text" id="savename" placeholder="e.g. Fade 15¢ spikes, NBA"></label><div><button class="btn primary" id="save">Save current strategy</button></div></div>
+      ${list.length ? `<div class="tablewrap"><table><thead><tr><th>Strategy</th><th class="n">Bets</th><th class="n">Return</th><th class="n">Likely range</th><th class="n">Halves</th><th></th></tr></thead><tbody>${rowsHTML}</tbody></table></div>
+        <p class="hint">Every saved strategy is rerun on the sample chosen on the left (dates${ds().leagues ? ", leagues" : ""} and sample size), with its own bet, price range and conditions. Saved in this browser only.</p>`
+      : `<div class="empty">Nothing saved yet. Set up a strategy on the left, name it, and save it.</div>`}</div>`;
+  }
+  const describe = () => `${sides().find((x) => x.id === S.side).label} · ${typeof moment().phrase === "function" ? moment().phrase(S.params) : moment().label}${S.filters.length ? ` · ${S.filters.length} condition${S.filters.length > 1 ? "s" : ""}` : ""}${S.pmin > 1 || S.pmax < 99 ? ` · ${S.pmin}–${S.pmax}¢` : ""}`;
+
   function render() {
     if (ds().ensure && !ds().ensure(render)) { syncControls(); $("samplenote").textContent = "Loading price paths…";
       $(S.tab === "link" ? "linkout" : "view-" + S.tab).innerHTML = `<div class="empty">Loading price paths…</div>`; return; }
@@ -302,7 +356,8 @@
     const rows = sample();
     const all = ds().rows.length;
     $("samplenote").textContent = `${rows.length.toLocaleString()} of ${all.toLocaleString()} ${ds().unit} in the sample.`;
-    if (S.tab === "bet") renderBet(rows); else if (S.tab === "link") renderLink(rows); else renderScan(rows);
+    if (S.tab === "bet") renderBet(rows); else if (S.tab === "link") renderLink(rows); else if (S.tab === "scan") renderScan(rows); else renderMine(rows);
+    toHash();
   }
 
   // ---------------------------------------------------------------- events
@@ -316,7 +371,14 @@
     else if (t.id === "addfilter") { const c = ds().cols.find((c) => c.at <= momentAt() && c.type !== "date"); S.filters.push({ key: c.key }); render(); }
     else if (t.id === "reshuffle") { S.seed++; render(); }
     else if (t.id === "scratch") { Object.assign(S, { moment: null, side: null, filters: [], from: "", to: "", take: "all", pmin: 1, pmax: 99, preset: null, tab: "bet", params: {}, exit: {} }); render(); }
-    else if (t.id === "tab-bet" || t.id === "tab-link" || t.id === "tab-scan") { S.tab = t.id.slice(4); render(); }
+    else if (["tab-bet", "tab-link", "tab-scan", "tab-mine"].includes(t.id)) { S.tab = t.id.slice(4); render(); }
+    else if (t.id === "sweep") { $("sweepout").innerHTML = `<div class="empty">Running…</div>`; setTimeout(() => ($("sweepout").innerHTML = sweepHTML(sample())), 20); }
+    else if (t.id === "copylink") { toHash(); const done = () => { t.textContent = "Link copied"; setTimeout(() => (t.textContent = "Copy link to this strategy"), 1600); };
+      try { navigator.clipboard.writeText(location.href).then(done, done); } catch (err) { done(); } }
+    else if (t.id === "save") { const a = saved(), name = ($("savename").value || "").trim() || `Strategy ${a.length + 1}`; a.push({ name, desc: describe(), s: snapshot() }); setSaved(a); render(); }
+    else if (t.dataset.study) { const i = PRESETS.findIndex((p) => p.label === t.dataset.study); if (i >= 0) { $("preset").value = i; $("preset").dispatchEvent(new Event("change", { bubbles: true })); document.querySelector(".bench").scrollIntoView({ behavior: "smooth" }); } }
+    else if (t.dataset.load != null) { restore(saved()[+t.dataset.load].s); S.tab = "bet"; render(); }
+    else if (t.dataset.del != null) { const a = saved(); a.splice(+t.dataset.del, 1); setSaved(a); render(); }
   });
   document.addEventListener("change", (e) => {
     const t = e.target;
@@ -340,9 +402,13 @@
       render();
     }
   });
-  $("built").textContent = `Tennis and NBA score data built ${window.EDGE_DATA.built}` + (window.EDGE_SPORTS_INDEX ? `; all-sports price paths built ${window.EDGE_SPORTS_INDEX.built}.` : ".");
-  const start = PRESETS.findIndex((p) => p.label === "Bet against set-1 winner at −233 to −400");
-  const p = PRESETS[start];
-  Object.assign(S, { ds: p.ds, moment: p.moment, side: p.side, filters: p.filters.map((f) => Object.assign({}, f)), preset: start });
+  $("built").textContent = MODE === "build" ? `Price paths built ${window.EDGE_SPORTS_INDEX.built}.` : `Score data built ${window.EDGE_DATA.built}.`;
+  if (!fromHash()) {
+    const start = Math.max(0, PRESETS.findIndex((p) => p.label === (MODE === "build" ? "Buy the favorite when it falls to 30¢" : "Bet against set-1 winner at −233 to −400")));
+    const p = PRESETS[start];
+    Object.assign(S, { ds: p.ds, moment: p.moment, side: p.side, filters: p.filters.map((f) => Object.assign({}, f)), preset: start,
+                       params: Object.assign({}, p.params), exit: Object.assign({}, p.exit), pmin: p.pmin || 1, pmax: p.pmax || 99, from: p.from || "", to: p.to || "" });
+  }
+  window.addEventListener("hashchange", () => { if (fromHash()) render(); });
   render();
 })();

@@ -4,12 +4,17 @@
 (function () {
   const IDX = window.EDGE_SPORTS_INDEX;
   if (!IDX) return;
+  window.DATASETS = window.DATASETS || {}; window.PRESETS = window.PRESETS || [];
   const CODE = {}; [...IDX.alphabet].forEach((ch, i) => (CODE[ch] = i));
   const loaded = {}, loading = {};
   const decode = (s) => { const a = new Float32Array(s.length); let last = NaN;
     for (let i = 0; i < s.length; i++) { const v = CODE[s[i]]; if (v !== undefined) last = v; a[i] = last; } return a; };
   // An empty order book (bid 0, ask 100) is not a price: keep the last real quote instead.
-  const clean = (bid, ask) => { for (let i = 1; i < bid.length; i++) if (!(ask[i] - bid[i] <= 30)) { bid[i] = bid[i - 1]; ask[i] = ask[i - 1]; } };
+  // An empty book (bid 0, ask 100) or a missing quote is not a price. Keep the last real quote for display and
+  // for spotting triggers, but mark the sample as not tradeable: a bet can only fill at a live two-sided quote.
+  const clean = (bid, ask) => { const live = new Uint8Array(bid.length);
+    for (let i = 0; i < bid.length; i++) { if (ask[i] - bid[i] <= 30) live[i] = 1; else if (i) { bid[i] = bid[i - 1]; ask[i] = ask[i - 1]; } }
+    return live; };
   const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const fmtET = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23", weekday: "short" });
   const STAGE = { REG: "Regular season", POST: "Playoffs", PRE: "Preseason" };
@@ -20,9 +25,9 @@
       const g = (k) => r[ix[k]];
       const parts = Object.fromEntries(fmtET.formatToParts(new Date(g("ts") * 1000)).map((p) => [p.type, p.value]));
       const three = meta.three, aB = decode(g("b")), aA = decode(g("a"));
-      clean(aB, aA);
+      const liveA = clean(aB, aA);
       const bB = three ? decode(g("Bb")) : aA.map((v) => 100 - v), bA = three ? decode(g("Ba")) : aB.map((v) => 100 - v);
-      if (three) clean(bB, bA);
+      const liveB = three ? clean(bB, bA) : liveA;
       // [bid, ask] for A and B at each pre-game moment (B = buying "No" on A when there are only two outcomes)
       const pair = (k) => { const a = g(k); if (!a) return null; const b = three ? g("B" + k) : [100 - a[1], 100 - a[0]]; return b ? [a, b] : null; };
       const pre = pair("pre"), mid = (p) => (p[0] + p[1]) / 2;
@@ -32,7 +37,7 @@
         weekday: DAYS.find((d) => d.startsWith(parts.weekday)), hour: +parts.hour, names: [g("A"), g("B")],
         match: home === 0 ? `${g("B")} @ ${g("A")}` : `${g("A")} vs ${g("B")}`, home, win: g("draw") ? -1 : g("won") ? 0 : 1,
         stage: STAGE[g("season")] || "Other / unknown", vol: g("vol"), pvol: g("pvol"), mins: g("mins"),
-        bid: [aB, bB], ask: [aA, bA], pre, open: pair("open"), h24: pair("h24"), h1: pair("h1"), fav: F, n: aA.length };
+        bid: [aB, bB], ask: [aA, bA], live: [liveA, liveB], pre, open: pair("open"), h24: pair("h24"), h1: pair("h1"), fav: F, n: aA.length };
       o.fav_pre = mid(pre[F]) / 100; o.fav_name = o.names[F]; o.dog_name = o.names[1 - F];
       if (home === 0) o.home_pre = mid(pre[0]) / 100;
       for (const [k, key] of [["open", "move_open"], ["h24", "move_24h"], ["h1", "move_1h"]]) if (o[k]) o[key] = (mid(pre[F]) - mid(o[k][F])) / 100;
@@ -125,9 +130,11 @@
       return { p: q[s][1] / 100, won: r.win === s, pick: r.names[s], x: { pick_fav: s === favNow, pick_home: r.home === 0 ? s === 0 : null, pick_pre: (r.pre[s][0] + r.pre[s][1]) / 200 } };
     }
     const hit = find(r, moment, p); if (!hit) return null;
-    const i = hit.i, e = i + 1;                     // see it at sample i, get filled one sample (1-2 minutes) later
-    if (e >= r.n) return null;
+    const i = hit.i;
     const s = pickSide(r, side, hit, i); if (s == null) return null;
+    // See it at sample i, fill at the first live quote 1-3 samples later (never at a stale or empty book).
+    let e = i + 1; while (e < r.n && e <= i + 3 && !r.live[s][e]) e++;
+    if (e >= r.n || e > i + 3) return null;
     const price = r.ask[s][e]; if (!(price >= 2 && price <= 98)) return null;
     let hi = 0, lo = 100, flips = 0, sd = 0;
     for (let j = 0; j <= i; j++) { const m = midAt(r, s, j); if (m > hi) hi = m; if (m < lo) lo = m;
@@ -145,6 +152,7 @@
     const tp = +exit.tp || 0, sl = +exit.sl || 0, tm = +exit.tm || 0;
     if (tp || sl || tm) {
       for (let j = e + 1; j < r.n - 1; j++) {
+        if (!r.live[s][j]) continue;                                                   // can only sell into a live bid
         const b = r.bid[s][j];
         if (tp && b >= price + tp) { out.sell = (price + tp) / 100; break; }       // a resting sell order at the target
         if (sl && b <= price - sl) { out.sell = Math.max(1, b) / 100; break; }      // stop: sold at whatever the bid was

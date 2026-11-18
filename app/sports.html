@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Strategy Builder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Backtest betting strategies in 14 sports against real Kalshi prediction-market prices, with fees included, and test how prediction markets line up with stocks.">
+<meta property="og:title" content="Kalshi Edge Lab">
+<meta property="og:description" content="Backtest betting strategies in 14 sports against real Kalshi prices, and test how prediction markets line up with stocks.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<body data-mode="build">
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">14 leagues · 16,930 games · Kalshi prices every 1–2 minutes</span>
+    <h1>Strategy builder</h1>
+    <p class="lede">Build a betting rule and test it on real Kalshi prices: when to bet (before the start, a set minute, or a price trigger like “the favorite falls to 30¢”), who to back, which leagues and what conditions. Every bet is $10 at the real ask, filled 1–2 minutes after the rule is seen, after Kalshi's fee. Every strategy is a link you can share or save.</p>
+    <div class="seg" id="dataset" role="group" aria-label="Dataset"></div>
+    <p class="hint" id="dsnote" hidden></p>
+  </header>
+
+  <div class="bench">
+    <aside class="rail">
+      <section class="panel">
+        <h3>Strategy</h3>
+        <p class="hint">Build any strategy with the boxes below: pick when you bet, who you bet on, a price range, and as many conditions as you like. Or load one from the original research and tweak it.</p>
+        <select id="preset" aria-label="Load a strategy from the original research"><option value="">Load a strategy from the research…</option></select>
+        <div class="row2"><button class="btn" id="scratch">Start from scratch</button><button class="btn" id="copylink">Copy link to this strategy</button></div>
+      </section>
+
+      <section class="panel" id="leaguebox" hidden>
+        <h3>Leagues</h3>
+        <div class="chips" id="leagues"></div>
+        <button class="btn" id="allleagues">All / just one</button>
+        <p class="hint">Each league's prices load the first time you switch it on.</p>
+      </section>
+
+      <section class="panel">
+        <h3>Sample</h3>
+        <div class="row2">
+          <label class="field"><span>From</span><input type="date" id="from"></label>
+          <label class="field"><span>To</span><input type="date" id="to"></label>
+        </div>
+        <div class="row2">
+          <label class="field"><span>Use</span>
+            <select id="take"><option value="all">Everything</option><option value="recent">Most recent</option><option value="random">Random</option></select></label>
+          <label class="field"><span id="nlabel">How many</span><input type="number" id="n" min="10" step="50" value="1000"></label>
+        </div>
+        <button class="btn" id="reshuffle" hidden>Draw a new random sample</button>
+        <p class="hint" id="samplenote"></p>
+      </section>
+
+      <section class="panel">
+        <h3>Your bet</h3>
+        <label class="field"><span>When you bet</span><select id="moment"></select></label>
+        <div class="row2" id="params" hidden></div>
+        <label class="field"><span>Who you bet on</span><select id="side"></select></label>
+        <div class="row2">
+          <label class="field"><span>Price at least (¢)</span><input type="number" id="pmin" min="1" max="99" value="1"></label>
+          <label class="field"><span>Price at most (¢)</span><input type="number" id="pmax" min="1" max="99" value="99"></label>
+        </div>
+        <p class="hint" id="oddsnote"></p>
+      </section>
+
+      <section class="panel" id="exitpanel" hidden>
+        <h3>Getting out early (optional)</h3>
+        <div class="row3">
+          <label class="field"><span>Sell at +¢</span><input type="number" id="exit-tp" min="0" max="98" placeholder="—"></label>
+          <label class="field"><span>Stop at −¢</span><input type="number" id="exit-sl" min="0" max="98" placeholder="—"></label>
+          <label class="field"><span>After min</span><input type="number" id="exit-tm" min="0" max="400" placeholder="—"></label>
+        </div>
+        <p class="hint">Leave blank to hold every bet to the final result. Selling early pays Kalshi's fee a second time and sells at the bid.</p>
+      </section>
+
+      <section class="panel">
+        <h3>Only when…</h3>
+        <div class="filters" id="filters"></div>
+        <button class="btn" id="addfilter">Add a condition</button>
+        <p class="hint">Conditions only use what you'd know at the moment you bet. To look at things that happen later, like how long set 2 lasted, use <b>Find a link</b>.</p>
+      </section>
+    </aside>
+
+    <main class="sheet">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-bet" aria-selected="true">Test a bet</button>
+        <button role="tab" id="tab-link" aria-selected="false">Find a link</button>
+        <button role="tab" id="tab-scan" aria-selected="false">Strongest links</button>
+        <button role="tab" id="tab-mine" aria-selected="false">My strategies</button>
+      </div>
+      <div id="view-bet"></div>
+      <div id="view-link" hidden>
+        <div class="row2" style="max-width:640px">
+          <label class="field"><span>Compare by</span><select id="xcol"></select></label>
+          <label class="field"><span>Groups</span><select id="bins"><option>3</option><option>4</option><option selected>5</option><option>6</option><option>8</option><option>10</option></select></label>
+        </div>
+        <div id="linkout"></div>
+      </div>
+      <div id="view-scan" hidden></div>
+      <div id="view-mine" hidden></div>
+    </main>
+  </div>
+
+  <footer>
+    <p><b>Where the data comes from.</b> Kalshi's public API: for each game, the bid and ask before the start (a day out, an hour out and just before) and every 1–2 minutes during it, for 14 leagues since August 2025. Start times come from Kalshi's schedule. Tennis matches and UFC fights rarely start on time, so their start is detected from the first burst of price moves, using only prices up to that minute.</p>
+    <p><b>How bets are priced.</b> $10 per bet at the real ask, filled at the first live quote 1–2 minutes after the rule is seen (never at an empty order book), minus Kalshi's taker fee (7% × contracts × price × (1 − price), rounded up to the cent). Selling early sells at the bid and pays the fee again.</p>
+    <p>Prices only, no scores: a team's price falling is the market's read of the score. Research, not betting advice. Small samples can look profitable by luck; use the sensitivity check and the halves before trusting anything.</p>
+    <p id="built"></p>
+  </footer>
+</div>
+
+<script src="nav.js"></script>
+<script src="data/sports_index.js"></script>
+<script src="paths.js"></script>
+<script src="lab.js"></script>

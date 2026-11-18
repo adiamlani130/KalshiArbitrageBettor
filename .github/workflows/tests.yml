@@ -9,4 +9,5 @@ jobs:
         with: { python-version: "3.12" }
       - uses: actions/setup-node@v4
         with: { node-version: "22" }
+      - run: pip install numpy
       - run: python -m unittest discover tests -v

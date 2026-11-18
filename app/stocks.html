@@ -10,7 +10,6 @@
 
 <div class="wrap">
   <header class="top">
-    <nav class="pages" aria-label="Pages"><a href="index.html">Sports lab</a><a href="stocks.html" aria-current="page">Markets vs stocks</a><a href="strategies.html">Strategies &amp; hedging</a><a href="findings.html">Findings</a></nav>
     <span class="eyebrow">Kalshi probabilities · Yahoo Finance prices</span>
     <h1>Markets vs Stocks</h1>
     <p class="lede">When a prediction market reprices a Fed cut, a tariff ruling or a shutdown, do the stocks that should care move first, at the same time, or late? Pick a Kalshi market and a stock, then test it six ways.</p>
@@ -36,14 +35,14 @@
           <select id="dir"><option value="auto">Follow its past link (learned from earlier days only)</option><option value="up">Rise</option><option value="down">Fall</option></select></label>
         <label class="field"><span>Only if the stock has moved less than (%) that way</span><input type="number" id="gap" step="0.25" placeholder="any"></label>
         <div class="row2">
-          <label class="field"><span>Buy or short at</span><select id="entry"><option value="open">Next day's open</option><option value="close">That day's close</option></select></label>
+          <label class="field"><span>Buy or short at</span><select id="entry"><option value="open">Next day's open</option><option value="open2">The open two days later</option></select></label>
           <label class="field"><span>Hold (trading days)</span><input type="number" id="hold" min="1" max="30"></label>
         </div>
         <div class="row2">
           <label class="field"><span>Cost each way (%)</span><input type="number" id="cost" min="0" max="1" step="0.01"></label>
           <label class="field"><span>Apply to</span><select id="scope"><option value="one">This market, this stock</option><option value="stocks">This market, all linked stocks</option><option value="sigs">All markets in theme, this stock</option><option value="all">All markets in theme, all linked stocks</option></select></label>
         </div>
-        <p class="hint">Probabilities are read at 4:00pm New York time, the stock close, so "next day's open" is the first price you could really get.</p>
+        <p class="hint">Probabilities are read at 4:00pm New York time, the stock close, so the earliest trade is the next day's open. Trading at the 4pm close itself would use the signal before you could see it.</p>
       </section>
     </aside>
 
@@ -60,5 +59,6 @@
   </footer>
 </div>
 
+<script src="nav.js"></script>
 <script src="data/stocks.js"></script>
 <script src="stocks.js"></script>

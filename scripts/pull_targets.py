@@ -16,7 +16,7 @@ Output: app/data/targets.js
 """
 import json, math, os, sys, time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timezone
 import pull_stocks as P
 
 OUT = os.path.join(P.ROOT, "app", "data", "targets.js")
@@ -65,10 +65,13 @@ def build():
     under = {}
     for u, (label, sym, vol, drift) in UNDER.items():
         rows = load("ohlc_" + u); n = len(dates)
+        # Yahoo stamps crypto days at 00:00 UTC (the evening before, in New York). File each bar under its UTC date,
+        # so day D's close is 7-8pm New York time on D: before Kalshi's midnight price for D, never after it.
+        bar_day = (lambda t: datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d")) if sym.endswith("-USD") else day
         c, h, l, v = [None] * n, [None] * n, [None] * n, [None] * n
-        closes = [(day(t), cl) for t, _, _, cl in rows]
+        closes = [(bar_day(t), cl) for t, _, _, cl in rows]
         for k, (t, hi, lo, cl) in enumerate(rows):
-            i = di.get(day(t))
+            i = di.get(bar_day(t))
             if i is None: continue
             c[i], h[i], l[i] = round(cl, 2), round(hi or cl, 2), round(lo or cl, 2)
             if not vol and k >= 30:     # 30-day realized volatility, annualized (crypto trades every day)

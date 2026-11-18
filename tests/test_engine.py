@@ -7,8 +7,9 @@ def game(path_a, win=0, step=2, pre=(60, 61)):
     """A two-outcome game from team A's mid prices (1¢ spread), A the favorite unless pre says otherwise."""
     bid = [p - 0.5 for p in path_a]; ask = [p + 0.5 for p in path_a]
     preB = [100 - pre[1], 100 - pre[0]]
+    live = [True] * len(path_a)
     return dict(step=step, n=len(path_a), fav=0 if sum(pre) >= sum(preB) else 1, home=0, win=win, pre=[list(pre), preB], h1=None,
-                bid=[bid, [100 - a for a in ask]], ask=[ask, [100 - b for b in bid]])
+                bid=[bid, [100 - a for a in ask]], ask=[ask, [100 - b for b in bid]], live=[live, live])
 
 class Fees(unittest.TestCase):
     def test_fee_rounds_up_to_the_cent(self):
@@ -45,6 +46,34 @@ class Triggers(unittest.TestCase):
         self.assertEqual((bid[1], ask[1]), (40, 41))
 
 class NoPeeking(unittest.TestCase):
+    def test_no_fill_at_an_empty_book(self):
+        """If the book is empty right after the trigger, wait for the next live quote instead of using a stale one."""
+        g = game([60, 50, 28, 28, 40, 45, 50, 99])
+        g["live"] = [[True, True, True, False, False, True, True, True]] * 2
+        price, _, _ = E.bet(g, "below", "trig", x=30, w="fav")
+        self.assertAlmostEqual(price, 0.455)                                   # sample 5, not the stale sample 3
+        g["live"] = [[True, True, True, False, False, False, True, True]] * 2
+        self.assertIsNone(E.bet(g, "below", "trig", x=30, w="fav"))           # nothing live within 3 samples: no bet
+    def test_changing_the_future_never_changes_a_bet(self):
+        """For every rule, rewrite every price after the fill: the bet (when, which side, what price) must not change."""
+        import random
+        rnd = random.Random(7); rules = [("below", "trig", dict(x=30, w="fav")), ("above", "other", dict(x=80, w="either")),
+                                          ("drop", "trig", dict(x=15, w="fav")), ("crash", "trig", dict(x=10, m=10, w="either")),
+                                          ("spike", "other", dict(x=10, m=10, w="either")), ("t", "leader", dict(t=20))]
+        checked = 0
+        for _ in range(300):
+            path = [60.0]
+            for _ in range(60): path.append(min(99, max(1, path[-1] + rnd.choice([-6, -3, -1, 0, 1, 3, 6]))))
+            g = game(path, win=rnd.randint(0, 1))
+            for mo, side, p in rules:
+                b = E.bet(g, mo, side, **p)
+                if not b: continue
+                i, _ = E.find(g, mo, **p); fill = next(j for j in range(i + 1, g["n"]) if g["live"][b[2]][j])
+                h = game(path[:fill + 1] + [rnd.uniform(1, 99) for _ in path[fill + 1:]], win=1 - g["win"])
+                b2 = E.bet(h, mo, side, **p)
+                self.assertEqual((b2[0], b2[2]), (b[0], b[2]), mo); checked += 1
+        self.assertGreater(checked, 500)
+
     def test_early_bet_uses_the_favorite_at_that_moment(self):
         g = game([70] * 5, pre=(70, 71)); g["h1"] = [[40, 41], [59, 60]]     # A was the underdog an hour out, favorite at the start
         price, _, side = E.bet(g, "h1", "fav")
