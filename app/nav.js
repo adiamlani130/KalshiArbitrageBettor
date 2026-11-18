@@ -17,7 +17,7 @@
     : `<a href="${p.href}"${p.href === here ? ' aria-current="page"' : ""}>${esc(p.label)}</a>`).join("");
   const bar = document.createElement("header");
   bar.className = "sitebar";
-  bar.innerHTML = `<div class="sitebar-in"><a class="brand" href="index.html"><span class="brandmark" aria-hidden="true"></span>Kalshi Edge Lab</a>
+  bar.innerHTML = `<div class="sitebar-in"><a class="brand" href="index.html"><span class="brandmark" aria-hidden="true"></span>ArbLab</a>
     <nav class="sitenav" aria-label="Site">${links}</nav>
     <a class="gh" href="https://github.com/adiamlani130/KalshiArbitrageBettor" target="_blank" rel="noopener">GitHub ↗</a></div>`;
   document.body.prepend(bar);
