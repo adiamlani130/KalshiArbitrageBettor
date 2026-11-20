@@ -56,7 +56,7 @@ def load_universe():
     idx = json.load(open(os.path.join(UC, "index.json")))
     out = []
     for m in idx:
-        path = os.path.join(UC, "d_" + m["ticker"] + ".json")
+        path = os.path.join(UC, "d_" + m["ticker"].replace("/", "~") + ".json")
         if not os.path.exists(path): continue
         rows = json.load(open(path))
         if len(rows) < 4: continue
@@ -285,7 +285,7 @@ def section_c():
     for ser, et, tks in evs:
         series = {}
         for tk in tks:
-            p = os.path.join(UC, "d_" + tk + ".json")
+            p = os.path.join(UC, "d_" + tk.replace("/", "~") + ".json")
             if not os.path.exists(p): series = None; break
             series[tk] = {t // 86400: (b, a) for t, b, a, _ in json.load(open(p))}
         if not series: continue

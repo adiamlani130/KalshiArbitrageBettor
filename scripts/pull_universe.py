@@ -43,8 +43,10 @@ def log(*a): print(time.strftime("%H:%M:%S"), *a, flush=True)
 def ts(iso): return int(datetime.fromisoformat(iso.replace("Z", "+00:00")).timestamp())
 vol = lambda m: float(m.get("volume_fp") or m.get("volume") or 0)
 
+def fname(name): return name.replace("/", "~")      # a few tickers contain "/", which can't go in a file name
+
 def cached(name, fn):
-    path = os.path.join(CACHE, name + ".json")
+    path = os.path.join(CACHE, fname(name) + ".json")
     if os.path.exists(path):
         try: return json.load(open(path))
         except Exception: pass
