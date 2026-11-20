@@ -60,6 +60,13 @@ class CalibrationAndDutchBooks(unittest.TestCase):
             allm = [m for m in json.load(open(os.path.join(Z.UC, "mk_" + ser.replace("/", "~") + ".json"))) if m["event_ticker"] == et]
             self.assertEqual(sorted(m["ticker"] for m in allm), sorted(tks), et)
 
+    def test_a_cheap_yes_basket_is_never_called_locked_in(self):
+        """Exclusive rules out two winners, not zero, so only the buy-every-NO side may count as locked in."""
+        if not os.path.exists(os.path.join(Z.UC, "events.json")): self.skipTest("run scripts/pull_universe.py first")
+        C = Z.section_c()
+        self.assertTrue(all(r["side"] == "buy every NO" for r in C["top"]))
+        self.assertTrue(all(r["side"] == "buy every YES" for r in C["yes_top"]))
+
 class SportsIndicatorsUseOnlyThePast(unittest.TestCase):
     def test_rewriting_the_rest_of_the_game_never_moves_a_trigger(self):
         import engine as E

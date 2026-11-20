@@ -300,7 +300,7 @@ def section_e(markets):
 # ================================================================ C. Dutch books
 def section_c():
     evs = json.load(open(os.path.join(UC, "events.json")))
-    found, checked, days = [], 0, 0
+    found, cheap, checked, days = [], [], 0, 0
     for ser, et, tks in evs:
         series = {}
         for tk in tks:
@@ -320,11 +320,17 @@ def section_c():
             # buy one NO of every outcome: n-1 of them pay $1
             cost_no = sum(100 - b for b, a in q) / 100; f_no = sum(fee((100 - b) / 100, 1) for b, a in q)
             edge_yes, edge_no = 1 - cost - f_buy, (n - 1) - cost_no - f_no
-            if max(edge_yes, edge_no) > 0.005:
-                found.append(dict(event=et, day=iso(d * 86400), outcomes=n, side="buy every YES" if edge_yes > edge_no else "buy every NO",
-                                  edge=round(max(edge_yes, edge_no) * 100, 1), cost=round((cost if edge_yes > edge_no else cost_no) * 100, 1)))
-    found.sort(key=lambda r: -r["edge"])
-    return dict(events=checked, event_days=days, opportunities=len(found), events_with=len({r["event"] for r in found}), top=found[:25])
+            # "exactly one outcome wins" (Kalshi's mutually_exclusive) rules out two winners, not zero: "who drops out
+            # first?" can end with nobody dropping out. So buying every NO is locked in (it pays n-1, or n), but buying
+            # every YES pays only if some listed outcome happens. Keeping only events where one did would be hindsight,
+            # so the YES side is counted separately and never called locked in.
+            if edge_no > 0.005:
+                found.append(dict(event=et, day=iso(d * 86400), outcomes=n, side="buy every NO", edge=round(edge_no * 100, 1), cost=round(cost_no * 100, 1)))
+            if edge_yes > 0.005:
+                cheap.append(dict(event=et, day=iso(d * 86400), outcomes=n, side="buy every YES", edge=round(edge_yes * 100, 1), cost=round(cost * 100, 1)))
+    found.sort(key=lambda r: -r["edge"]); cheap.sort(key=lambda r: -r["edge"])
+    return dict(events=checked, event_days=days, opportunities=len(found), events_with=len({r["event"] for r in found}), top=found[:25],
+                yes_days=len(cheap), yes_events=len({r["event"] for r in cheap}), yes_top=cheap[:10])
 
 # ================================================================ B. Kalshi odds as an equity signal
 def section_b():
