@@ -22,6 +22,7 @@ This project tests well-known sports "trends" against real Kalshi prediction-mar
 | [Markets vs stocks](https://adiamlani130.github.io/KalshiArbitrageBettor/app/stocks.html) | 336 Kalshi markets against 242 stocks and ETFs: who moves first, lag trades, hourly shocks, announcements, earnings calls |
 | [Strategies & hedging](https://adiamlani130.github.io/KalshiArbitrageBettor/app/strategies.html) | Kalshi vs options-implied odds, merger spreads, second-order baskets, hedging a stock with a contract |
 | [Strategy search](https://adiamlani130.github.io/KalshiArbitrageBettor/app/findings.html) | What survived when a genetic algorithm, NEAT neural networks, a gradient-boosted model and a grid search hunted for strategies, judged on games they never saw |
+| [Strategy zoo](https://adiamlani130.github.io/KalshiArbitrageBettor/app/zoo.html) | SharkFin's trading strategies and prediction-market strategies run on thousands of settled Kalshi markets, on stocks with Kalshi odds as the signal, and on in-game prices; plus a Dutch-book arbitrage scan and a map of where Kalshi's odds are off |
 
 ## Key results
 

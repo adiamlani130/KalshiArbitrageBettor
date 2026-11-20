@@ -21,6 +21,8 @@ A backtest leaks when a decision uses information that would not have been avail
 | 7 | "Stock first, then Kalshi" (`app/strategies.js`) | The stock's move to the 4pm close was the signal, and the contract was bought at its 4pm price: the same instant. | The contract is bought and sold at its 5pm price, an hour after the signal. | `test_stock_first_then_kalshi` |
 | 8 | Lag trade entry (`app/stocks.js`) | "Buy at that day's close" traded at 4pm on a signal read at 4pm. | Removed. The choices are the next day's open or the open two days later. | `test_lag_trade` |
 | 9 | Merger spread default (`app/strategies.js`) | The default offer was $31, the price the stock ended at. | The default is Paramount's $30 tender, the figure public when the Kalshi market opened. | — |
+| 10 | Strategy zoo, in-game EMA crossover and breakthrough rules (`analysis/zoo.py`) | Each rule searched the whole game for team A before looking at team B, so a bet on team B at minute 52 was only placed because team A never triggered *later*. Before the fix the EMA crossover looked like a lead (+3.3% on the test games); after it, −7.1%. | Time on the outside: at each moment both teams are checked and the first trigger wins. | `test_rewriting_the_rest_of_the_game_never_moves_a_trigger` (it found this bug) |
+| 11 | Strategy zoo, "days left" in near-expiry rules | Markets such as "before December 31?" close early when the event happens, so days left measured from the close would reveal the outcome. | Days left always comes from the scheduled expiration saved when the market was listed. | `test_days_left_comes_from_the_schedule_not_the_close` |
 
 ## How the tests check for leaks
 
@@ -30,6 +32,7 @@ The strongest test for a leak is to **change the future and see if the past chan
 - **Machine search** (`tests/test_evolve.py`): in 125 real games, every quote after a random moment is scrambled and the result flipped; every decision point up to that moment (its features and the price paid) must be identical. The "1 hour before" decision point is checked against changes to the closing line, volume and favorite.
 - **Markets pages** (`tests/test_markets.py` → `tests/markets_harness.js`): runs the real `stocks.js` and `strategies.js` in Node, computes every lag trade, stock-first trade, basket, hedge size and options-model price, scrambles every stock, Kalshi, index and volatility price after a cutoff day, and recomputes. All 25,000+ decisions up to the cutoff must match. A **canary**, a deliberately leaky rule that peeks one day ahead, must change, proving the scramble reached the future.
 - **Time splits** (`tests/test_evolve.py`): the search, validation and test periods are in date order, and rule thresholds are quantiles of the search period alone.
+- **Strategy zoo** (`tests/test_zoo.py`): every Kalshi strategy family's decision on day *i* must be unchanged when all later prices are scrambled (50,000+ checks), near-expiry rules must not see when a market closed, fills come after the signal, and every in-game indicator's first trigger must survive rewriting the rest of the game.
 - **Two engines, one answer**: the browser engine (`app/paths.js`, run in Node) and the Python engine (`analysis/engine.py`) must produce the same bets and the same profit on the NFL file.
 
 ## Known limits (disclosed, not leaks in a trade)

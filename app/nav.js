@@ -10,6 +10,7 @@
     { href: "strategies.html", label: "Strategies & hedging" },
     { group: "Results" },
     { href: "findings.html", label: "Strategy search" },
+    { href: "zoo.html", label: "Strategy zoo" },
   ];
   const here = (location.pathname.split("/").pop() || "index.html").toLowerCase();
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
