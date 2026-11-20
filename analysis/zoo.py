@@ -71,7 +71,7 @@ def load_universe():
             if m_ is None: continue
             T.append(t); bid.append(b if live else None); ask.append(a if live else None); mid.append(m_); last = m_
         if len(T) < 4: continue
-        out.append(dict(id=m["ticker"], cat=m["cat"], series=m["series"], title=m.get("title") or "", settle=100 if m["result"] == "yes" else 0,
+        out.append(dict(id=m["ticker"], event=m.get("event_ticker") or m["ticker"], cat=m["cat"], series=m["series"], title=m.get("title") or "", settle=100 if m["result"] == "yes" else 0,
                         sched=sched, close=close, early=bool(m.get("can_close_early")), T=T, bid=bid, ask=ask, mid=np.array(mid, float)))
     return out
 
@@ -254,28 +254,47 @@ def section_a(markets):
     return dict(cut=iso(cut), markets=len(markets), families=fams)
 
 # ================================================================ E. calibration by category
+def binom_p(k, n, p):
+    """Two-sided exact binomial p-value of k YES out of n when each was priced at p (normal approximation for n > 400)."""
+    p = min(max(p, 1e-6), 1 - 1e-6)
+    if n > 400:
+        z = (k - n * p) / math.sqrt(n * p * (1 - p)); return math.erfc(abs(z) / math.sqrt(2))
+    pmf = [math.comb(n, i) * p ** i * (1 - p) ** (n - i) for i in range(n + 1)]
+    return min(1.0, sum(x for x in pmf if x <= pmf[k] * (1 + 1e-9)))
+
 def section_e(markets):
+    """Each market's price a day before its scheduled end (and before it actually closed) against the result.
+    An 'edge' must (1) pass an exact binomial test of win rate vs price, after a false-discovery correction across
+    cells, (2) make money after fees when averaged per event (markets on the same event move together), and
+    (3) make money in both halves of the period."""
+    allt = sorted(m["T"][0] for m in markets); half = allt[len(allt) // 2]
     cells = {}
     for m in markets:
         if not m["sched"]: continue
-        # the last day-end quote at least one day before the scheduled end, and before the market actually closed
         ks = [k for k, t in enumerate(m["T"]) if t <= m["sched"] - 86400 and t <= m["close"] - 3600 and m["ask"][k] is not None]
         if not ks: continue
         k = ks[-1]; p = m["mid"][k]
         b = int(min(99, p) // 10) * 10
         for cat in (m["cat"], "All non-sports"):
-            c = cells.setdefault((cat, b), dict(n=0, yes=0, imp=0.0, by=[], bn=[], t=[]))
+            c = cells.setdefault((cat, b), dict(n=0, yes=0, imp=0.0, ev={}))
             c["n"] += 1; c["yes"] += m["settle"] == 100; c["imp"] += p
-            c["by"].append(buy_hold(m["ask"][k], m["settle"])); c["bn"].append(buy_hold(100 - m["bid"][k], 100 - m["settle"]))
+            e = c["ev"].setdefault(m["event"], dict(y=[], n=[], late=m["T"][k] >= half))
+            e["y"].append(buy_hold(m["ask"][k], m["settle"])); e["n"].append(buy_hold(100 - m["bid"][k], 100 - m["settle"]))
     rows = []
     for (cat, b), c in sorted(cells.items()):
         if c["n"] < 25: continue
-        sy, sn = stats(c["by"]), stats(c["bn"])
-        rows.append(dict(cat=cat, lo=b, hi=b + 10, n=c["n"], won=round(c["yes"] / c["n"], 3), implied=round(c["imp"] / c["n"] / 100, 3),
-                         buy_yes=sy, buy_no=sn))
-    ps = [min(r["buy_yes"]["p"], r["buy_no"]["p"]) * 2 for r in rows]
-    ok = bh([min(1, p) for p in ps])
-    for i, r in enumerate(rows): r["edge"] = i in ok and max(r["buy_yes"]["roi"], r["buy_no"]["roi"]) > 0
+        ev = list(c["ev"].values())
+        per_y, per_n = [float(np.mean(e["y"])) for e in ev], [float(np.mean(e["n"])) for e in ev]
+        half_y = [float(np.mean([y for e, y in zip(ev, per_y) if e["late"] == h] or [0])) for h in (False, True)]
+        half_n = [float(np.mean([y for e, y in zip(ev, per_n) if e["late"] == h] or [0])) for h in (False, True)]
+        rows.append(dict(cat=cat, lo=b, hi=b + 10, n=c["n"], events=len(ev), won=round(c["yes"] / c["n"], 3), implied=round(c["imp"] / c["n"] / 100, 3),
+                         p=binom_p(c["yes"], c["n"], c["imp"] / c["n"] / 100), buy_yes=stats(per_y), buy_no=stats(per_n),
+                         halves_yes=[round(x / STAKE, 4) for x in half_y], halves_no=[round(x / STAKE, 4) for x in half_n]))
+    ok = bh([r["p"] for r in rows])
+    for i, r in enumerate(rows):
+        side = "buy_yes" if r["won"] > r["implied"] else "buy_no"; hv = r["halves_yes" if side == "buy_yes" else "halves_no"]
+        r["edge"] = bool(i in ok and r["events"] >= 15 and r[side]["t"] >= 2 and r[side]["roi"] > 0 and min(hv) > 0)
+        r["side"] = "YES" if side == "buy_yes" else "NO"; r["p"] = round(r["p"], 5)
     return rows
 
 # ================================================================ C. Dutch books

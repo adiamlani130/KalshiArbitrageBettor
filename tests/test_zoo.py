@@ -42,6 +42,24 @@ class KalshiFamiliesUseOnlyThePast(unittest.TestCase):
         m = market([50, 50, 70, 75, 80, 90]); tr = Z.trade(m, 2, "yes", None, 0)
         self.assertEqual(tr["t"], m["T"][3]); self.assertEqual(tr["px"], m["ask"][3])
 
+class CalibrationAndDutchBooks(unittest.TestCase):
+    def test_a_clean_sweep_at_96_cents_is_not_an_edge(self):
+        """54 YES out of 54, each priced 96¢, is what you'd expect 1 time in 10: not evidence of mispricing."""
+        self.assertGreater(Z.binom_p(54, 54, 0.959), 0.05)
+        self.assertLess(Z.binom_p(30, 100, 0.6), 0.001)          # 30 of 100 at 60¢ really is off
+
+    def test_dutch_book_events_are_complete_and_exclusive(self):
+        """Every event scanned for a Dutch book must be flagged mutually exclusive by Kalshi, and every one of its
+        outcomes must have been pulled, or a missing outcome would fake a cheap 'buy everything'."""
+        idx = os.path.join(Z.UC, "events.json")
+        if not os.path.exists(idx): self.skipTest("run scripts/pull_universe.py first")
+        import json
+        for ser, et, tks in json.load(open(idx)):
+            flag = json.load(open(os.path.join(Z.UC, "ev_" + et.replace("/", "~") + ".json")))
+            self.assertTrue(flag.get("mutually_exclusive"), et)
+            allm = [m for m in json.load(open(os.path.join(Z.UC, "mk_" + ser.replace("/", "~") + ".json"))) if m["event_ticker"] == et]
+            self.assertEqual(sorted(m["ticker"] for m in allm), sorted(tks), et)
+
 class SportsIndicatorsUseOnlyThePast(unittest.TestCase):
     def test_rewriting_the_rest_of_the_game_never_moves_a_trigger(self):
         import engine as E

@@ -102,19 +102,26 @@ def main():
     log(len(S), "eligible series;", len(chosen), "sampled across", len(by), "categories")
     if "--list" in sys.argv: return
     def one_series(s):
-        ms = cached("mk_" + s["ticker"], lambda: markets(s["ticker"]))
-        ms = [m for m in ms if vol(m) >= MIN_VOLUME and (m.get("close_time") or "") >= SINCE]
-        return s, sorted(ms, key=lambda m: -vol(m))
+        allm = [m for m in cached("mk_" + s["ticker"], lambda: markets(s["ticker"])) if (m.get("close_time") or "") >= SINCE]
+        return s, sorted([m for m in allm if vol(m) >= MIN_VOLUME], key=lambda m: -vol(m)), allm
     with ThreadPoolExecutor(8) as ex: lists = list(ex.map(one_series, chosen))
     todo, events = [], {}
-    for s, ms in lists:
+    for s, ms, allm in lists:
         for m in ms[:PER_SERIES]: todo.append((s, m))
-        for m in ms: events.setdefault((s["ticker"], m["event_ticker"]), []).append(m)
+        # every outcome of an event, whatever its volume: leaving out a thin outcome would fake a Dutch book
+        for m in allm: events.setdefault((s["ticker"], m["event_ticker"]), []).append(m)
     # mutually exclusive events: all outcomes present, exactly one YES, 3+ outcomes; keep the busiest few per series
     me, per = [], {}
-    for (ser, et), ms in sorted(events.items(), key=lambda kv: -sum(vol(m) for m in kv[1])):
-        if len(ms) >= 3 and sum(m["result"] == "yes" for m in ms) == 1 and per.get(ser, 0) < 2:
-            per[ser] = per.get(ser, 0) + 1; me.append((ser, et, ms))
+    cands = [(ser, et, ms) for (ser, et), ms in sorted(events.items(), key=lambda kv: -sum(vol(m) for m in kv[1]))
+             if len(ms) >= 3 and sum(m["result"] == "yes" for m in ms) == 1 and sum(vol(m) for m in ms) >= MIN_VOLUME * 3]
+    # only events Kalshi itself marks as mutually exclusive (a threshold ladder can have one YES by chance)
+    def flag(x):
+        ser, et, ms = x
+        e = cached("ev_" + et, lambda: {k: v for k, v in (get("/events/" + et).get("event") or {}).items() if k in ("mutually_exclusive", "title")})
+        return x if e.get("mutually_exclusive") else None
+    with ThreadPoolExecutor(8) as ex: flagged = [x for x in ex.map(flag, cands[:1500]) if x]
+    for ser, et, ms in flagged:
+        if per.get(ser, 0) < 2: per[ser] = per.get(ser, 0) + 1; me.append((ser, et, ms))
     me = me[:400]
     have = {m["ticker"] for _, m in todo}
     s_of = {s["ticker"]: s for s in chosen}
