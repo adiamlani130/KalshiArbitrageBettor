@@ -32,9 +32,9 @@ def features(g):
     F["qtr"] = S["qtr"]; F["ok"] = S["started"] & (S["secs_left"] > 120)
     return F
 
-def rules(G):
-    """Every rule is (name, function F,s -> bool array). Thresholds from the 2025 season's moments only."""
-    train = [g for g in G if g["season"] == 2025]
+def rules(G, STATS=STATS, SCORE=SCORE, WHEN=WHEN, train_season=2025, model=True):
+    """Every rule is (name, function F,s -> bool array). Thresholds from the search season's moments only."""
+    train = [g for g in G if g["season"] == train_season]
     pool = {k: np.concatenate([g["F"][s][k][g["F"]["ok"]] for g in train for s in (0, 1)]) for k in STATS}
     q = {k: [float(np.quantile(pool[k][pool[k] > 0], x)) if (pool[k] > 0).any() else 1 for x in (.5, .8)] for k in STATS}
     R = []
@@ -49,7 +49,7 @@ def rules(G):
             R.append((f"{sn}, {wn}, ahead on {k1} and {k2}: buy it", lambda F, s, b=base, k1=k1, k2=k2: b(F, s) & (F[s][k1] >= q[k1][0]) & (F[s][k2] >= q[k2][0])))
             R.append((f"{sn}, {wn}, behind on {k1} and {k2}: buy it", lambda F, s, b=base, k1=k1, k2=k2: b(F, s) & (F[s][k1] <= -q[k1][0]) & (F[s][k2] <= -q[k2][0])))
     # the nflfastR win-probability model (fit on seasons before these) against Kalshi's price
-    for x, (wn, (q0, q1)) in itertools.product((4, 8, 12, 16), WHEN.items()):
+    for x, (wn, (q0, q1)) in (itertools.product((4, 8, 12, 16), WHEN.items()) if model else []):
         R.append((f"{wn}, model win chance {x}+ points above the price: buy it", lambda F, s, x=x, q0=q0, q1=q1: F["ok"] & (F["qtr"] >= q0) & (F["qtr"] <= q1) & (F[s]["wp"] * 100 - F[s]["price"] >= x)))
         R.append((f"{wn}, model win chance {x}+ points below the price: buy it", lambda F, s, x=x, q0=q0, q1=q1: F["ok"] & (F["qtr"] >= q0) & (F["qtr"] <= q1) & (F[s]["price"] - F[s]["wp"] * 100 >= x)))
     return R
