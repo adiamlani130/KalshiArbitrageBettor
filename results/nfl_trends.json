@@ -1,0 +1,182 @@
+{
+ "games": {
+  "2025": 281,
+  "2026": 135
+ },
+ "rules_tried": 1974,
+ "picked": 2,
+ "works": 0,
+ "luck_expected": 45.0,
+ "test_mean_roi_of_picked": -0.0086,
+ "picked_rules": [
+  {
+   "rule": "tied, 1st half, behind on yards and sacks_margin: buy it",
+   "train": {
+    "n": 30,
+    "roi": 0.5329,
+    "t": 2.0501,
+    "p": 0.0202
+   },
+   "test": {
+    "n": 14,
+    "roi": 0.1795,
+    "t": 0.3555,
+    "p": 0.3611
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 1-8, 3rd quarter, ahead on ypp and plays: buy it",
+   "train": {
+    "n": 28,
+    "roi": 0.1598,
+    "t": 2.0708,
+    "p": 0.0192
+   },
+   "test": {
+    "n": 17,
+    "roi": -0.1967,
+    "t": -1.2635,
+    "p": 0.8968
+   },
+   "works": false
+  }
+ ],
+ "best_train": [
+  {
+   "rule": "leading 9+, 4th quarter, behind on first_downs and third_rate: buy it",
+   "train": {
+    "n": 3,
+    "roi": 0.0928,
+    "t": 8.2291,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "leading 9+, 4th quarter, behind on explosive and third_rate: buy it",
+   "train": {
+    "n": 2,
+    "roi": 0.0925,
+    "t": 7.9927,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "tied, 4th quarter, ahead on sacks_margin and third_rate: buy it",
+   "train": {
+    "n": 2,
+    "roi": 0.7639,
+    "t": 6.101,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "leading 9+, 1st half, behind on turnover_margin and plays: buy it",
+   "train": {
+    "n": 2,
+    "roi": 0.3008,
+    "t": 6.0144,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "leading 9+, 4th quarter, far behind on turnover_margin: buy it",
+   "train": {
+    "n": 7,
+    "roi": 0.0695,
+    "t": 5.3768,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "leading 9+, 4th quarter, behind on penalty_margin and third_rate: buy it",
+   "train": {
+    "n": 5,
+    "roi": 0.0823,
+    "t": 4.9602,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "leading 9+, 3rd quarter, clearly behind on third_rate: buy it",
+   "train": {
+    "n": 14,
+    "roi": 0.1534,
+    "t": 4.764,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "trailing 1-8, 3rd quarter, ahead on epa and plays: buy it",
+   "train": {
+    "n": 5,
+    "roi": 0.805,
+    "t": 4.6447,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "leading 9+, 1st half, far behind on plays: buy it",
+   "train": {
+    "n": 8,
+    "roi": 0.1315,
+    "t": 4.6247,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "tied, 4th quarter, ahead on ypp and third_rate: buy it",
+   "train": {
+    "n": 3,
+    "roi": 0.3063,
+    "t": 4.5186,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "trailing 1-8, 3rd quarter, far ahead on epa: buy it",
+   "train": {
+    "n": 2,
+    "roi": 0.6387,
+    "t": 4.3295,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "trailing 1-8, 3rd quarter, ahead on first_downs and epa: buy it",
+   "train": {
+    "n": 5,
+    "roi": 0.7714,
+    "t": 4.1764,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "leading 9+, 3rd quarter, behind on first_downs and sacks_margin: buy it",
+   "train": {
+    "n": 3,
+    "roi": 0.263,
+    "t": 4.0158,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "leading 9+, 1st half, behind on explosive and penalty_margin: buy it",
+   "train": {
+    "n": 3,
+    "roi": 0.32,
+    "t": 3.9857,
+    "p": 0.0
+   }
+  },
+  {
+   "rule": "leading 9+, 3rd quarter, behind on yards and third_rate: buy it",
+   "train": {
+    "n": 2,
+    "roi": 0.2386,
+    "t": 3.9669,
+    "p": 0.0
+   }
+  }
+ ]
+}
