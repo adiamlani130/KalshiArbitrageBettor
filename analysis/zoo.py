@@ -52,8 +52,8 @@ def round_trip(price, sell):            # bought at `price`, sold early at `sell
     return c * q - STAKE - fee(p, c) - fee(q, c)
 
 # ================================================================ A. Kalshi contracts as an asset
-def load_universe():
-    idx = json.load(open(os.path.join(UC, "index.json")))
+def load_universe(index="index.json"):
+    idx = json.load(open(os.path.join(UC, index)))
     out = []
     for m in idx:
         path = os.path.join(UC, "d_" + m["ticker"].replace("/", "~") + ".json")
