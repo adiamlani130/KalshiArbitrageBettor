@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Strategy Zoo · ArbLab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="SharkFin's trading strategies and prediction-market strategies tested on thousands of Kalshi markets, on stocks with Kalshi odds as the signal, and on in-game sports prices, each graded on a later period.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+.heat { display: grid; gap: 2px; font: 12px var(--mono); min-width: 640px }
+.heat .c { padding: 7px 4px; text-align: center; border-radius: 3px; color: var(--ink) }
+.heat .h { color: var(--ink-3); background: none; text-align: center; padding: 4px }
+.heat .r { color: var(--ink-2); text-align: left; background: none; font-family: var(--body); white-space: nowrap; padding-right: 8px }
+.heat .c.edge { outline: 2px solid var(--ink); outline-offset: -2px }
+.verdict { font: 600 12px var(--body); padding: 3px 8px; border-radius: 999px; white-space: nowrap }
+.verdict.ok { background: var(--good-soft); color: var(--good) } .verdict.no { background: var(--bad-soft); color: var(--bad) } .verdict.mid { background: var(--warn-soft); color: var(--warn) }
+.cats { display: flex; flex-wrap: wrap; gap: 4px } .cats span { font: 11px var(--mono); padding: 2px 6px; border-radius: 4px; background: var(--line-2) }
+.sub { color: var(--ink-2); max-width: 82ch; margin: 6px 0 12px }
+</style>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Strategy zoo · picked on one period, graded on a later one</span>
+    <h1>Strategy zoo</h1>
+    <p class="lede" id="lede"></p>
+  </header>
+  <div class="tabs" role="tablist" style="border:0"><a class="cta-tab" href="#a">Kalshi as an asset</a><a class="cta-tab" href="#e">Where the odds are off</a><a class="cta-tab" href="#c">Dutch books</a><a class="cta-tab" href="#b">Odds → stocks</a><a class="cta-tab" href="#d">Sports indicators</a></div>
+  <main class="sheet" id="out"></main>
+  <footer>
+    <p><b>Method.</b> Each strategy family has a small grid of settings. The best setting is chosen on the earlier period only (by t-statistic, with a minimum number of trades) and then graded once on the later period. Kalshi trades buy at the ask and sell at the bid of the next day's closing quote, after Kalshi's fee; held trades settle at $1 or $0. Stocks trade at the next day's open. "Days left" always uses the market's scheduled end, never the time it actually closed, because many markets close early when the event happens. "Works" means the result was positive in the earlier period and survived a 10% false-discovery correction (t ≥ 2) in the later one.</p>
+    <p>Reproduce with <code>python scripts/pull_universe.py</code> then <code>python analysis/zoo.py</code>. Research, not betting or investment advice. <span id="built"></span></p>
+  </footer>
+</div>
+<script src="nav.js"></script>
+<script src="data/zoo.js"></script>
+<script>
+(function () {
+  const Z = window.ZOO, $ = (id) => document.getElementById(id); if (!Z) return;
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const pct = (v, d = 1) => v == null || isNaN(v) ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v * 100).toFixed(d) + "%";
+  const cls = (v) => (v >= 0 ? "pos" : "neg"), fmt = (n) => Number(n ?? 0).toLocaleString();
+  const tile = (k, v, c = "") => `<div class="tile"><span>${k}</span><b class="${c}">${v}</b></div>`;
+  const table = (head, rows) => `<div class="tablewrap" style="max-height:560px;overflow-y:auto"><table><thead><tr>${head.map((h) => `<th class="${h[1] || ""}">${h[0]}</th>`).join("")}</tr></thead><tbody>${rows.join("") || `<tr><td colspan="${head.length}" class="empty">Nothing to show.</td></tr>`}</tbody></table></div>`;
+  const st = (s) => s && s.n ? `<td class="n ${cls(s.roi)}">${pct(s.roi)}</td><td class="n">${fmt(s.n)}</td>` : `<td class="n">—</td><td class="n">0</td>`;
+  const verdict = (ok, mid) => ok ? `<span class="verdict ok">Works</span>` : mid ? `<span class="verdict mid">Lead only</span>` : `<span class="verdict no">Doesn't hold</span>`;
+  const parts = [];
+  const A = Z.A, E = Z.E, C = Z.C, B = Z.B, D = Z.D;
+  const works = [...(A ? A.families.filter((f) => f.works) : []), ...(D ? D.families.filter((f) => f.works) : [])].length + (B ? B.rules.filter((r) => r.works).length : 0);
+  $("lede").innerHTML = `SharkFin's trading strategies (Dive Zone dips, momentum, trend, breakouts, Bollinger, MACD, the "new high after a fall" breakthrough, buying fear) plus strategies built for prediction markets, run on ${A ? `<b>${fmt(Z.universe.markets)}</b> settled Kalshi markets outside sports, ` : ""}on stocks with Kalshi odds as the signal, and on ${D ? `<b>${fmt(D.games)}</b> games' in-game prices` : "in-game prices"}. Settings were picked on an earlier period and graded once on a later one.`;
+
+  const summary = [];
+  if (A) { const best = [...A.families].sort((a, b) => b.grade.t - a.grade.t)[0];
+    summary.push(`Kalshi contracts: <b>${A.families.filter((f) => f.works).length} of ${A.families.length}</b> strategy families held up on the later period. Best in the later period: <b>${esc(best.family.replace("_", " "))}</b> (${pct(best.grade.roi)} on ${fmt(best.grade.n)} trades).`); }
+  if (E) { const ed = E.filter((r) => r.edge); summary.push(`Calibration: <b>${ed.length}</b> category-and-price cells showed a gap big enough to beat fees after correcting for the number of cells checked.`); }
+  if (C) summary.push(`Dutch books: <b>${fmt(C.opportunities)}</b> locked-in event-days out of ${fmt(C.event_days)} across ${C.events} exclusive events; the cheap YES baskets (${fmt(C.yes_days ?? 0)} days) all bet that some listed outcome happens.`);
+  if (B) summary.push(`Odds as a stock signal: <b>${B.rules.filter((r) => r.works).length} of ${B.rules.length}</b> rules beat buy-and-hold on risk-adjusted return in both periods.`);
+  if (D) summary.push(`Sports: <b>${D.families.filter((f) => f.works).length} of ${D.families.length}</b> SharkFin indicator families held up on the test games.`);
+  parts.push(`<div style="display:grid;gap:12px"><div class="tiles">${tile("Markets outside sports", fmt(Z.universe?.markets))}${tile("Strategy families", (A?.families.length || 0) + (D?.families.length || 0) + (B ? 1 : 0) + 1)}${tile("Held up", works, works ? "pos" : "")}${tile("Locked-in Dutch books", fmt(C?.opportunities))}${tile("Sports games", fmt(D?.games))}${tile("Stocks", "SPY · QQQ · IWM · TLT")}</div>
+    <ul style="margin:0;padding-left:18px;display:grid;gap:6px">${summary.map((s) => `<li>${s}</li>`).join("")}</ul></div>`);
+
+  if (A) parts.push(`<div id="a"><h2>A. SharkFin's strategies, trading Kalshi contracts</h2><p class="sub">Each contract's price is treated like a stock chart. Signals use day-end prices; trades buy at the next day's ask and sell at its bid (or hold to settlement), after Kalshi's fee. Earlier period: before ${esc(A.cut)}; later period: from ${esc(A.cut)}.</p>
+    ${table([["Strategy (best setting on the earlier period)", "wrap"], ["Earlier", "n"], ["Trades", "n"], ["Later", "n"], ["Trades", "n"], ["t (later)", "n"], ["Later, by category"], ["Verdict"]],
+      A.families.map((f) => `<tr><td class="wrap"><b>${esc(f.family.replace("_", " "))}</b><br><span class="hint">${esc(f.rule)}</span></td>${st(f.pick)}${st(f.grade)}<td class="n">${f.grade.t}</td>
+        <td><div class="cats">${Object.entries(f.grade_by_cat || {}).sort((a, b) => b[1].n - a[1].n).slice(0, 5).map(([k, v]) => `<span class="${cls(v.roi)}">${esc(k)} ${pct(v.roi, 0)}</span>`).join("")}</div></td>
+        <td>${verdict(f.works, f.grade.roi > 0 && f.pick.roi > 0)}</td></tr>`))}</div>`);
+
+  if (E && E.length) {
+    const cats = [...new Set(E.map((r) => r.cat))].sort((a, b) => (a === "All non-sports" ? -1 : b === "All non-sports" ? 1 : a.localeCompare(b)));
+    const buckets = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90];
+    const col = (g) => { const a = Math.min(1, Math.abs(g) / 0.15); return g >= 0 ? `color-mix(in srgb, var(--good) ${Math.round(a * 55)}%, var(--sheet))` : `color-mix(in srgb, var(--bad) ${Math.round(a * 55)}%, var(--sheet))`; };
+    let grid = `<div class="heat" style="grid-template-columns: minmax(140px, auto) repeat(${buckets.length}, minmax(48px, 1fr))"><span class="c h"></span>${buckets.map((b) => `<span class="c h">${b}–${b + 10}¢</span>`).join("")}`;
+    for (const c of cats) { grid += `<span class="c r">${esc(c)}</span>`;
+      for (const b of buckets) { const r = E.find((x) => x.cat === c && x.lo === b);
+        grid += r ? `<span class="c${r.edge ? " edge" : ""}" style="background:${col(r.won - r.implied)}" title="${esc(c)}, priced ${b}-${b + 10}¢: ${r.n} markets on ${r.events} events, YES won ${(r.won * 100).toFixed(0)}% vs ${(r.implied * 100).toFixed(0)}% priced. Buy YES ${pct(r.buy_yes.roi)}, buy NO ${pct(r.buy_no.roi)}.">${r.won - r.implied >= 0 ? "+" : "−"}${Math.abs((r.won - r.implied) * 100).toFixed(0)}</span>` : `<span class="c" style="background:var(--line-2)"></span>`; } }
+    grid += `</div>`;
+    const ed = E.filter((r) => r.edge);
+    parts.push(`<div id="e"><h2>E. Where Kalshi's odds are off</h2><p class="sub">For every settled market, its price a day before the scheduled end against what happened. Each cell is how many points more (green) or less (red) often YES won than the price said. Outlined cells pass every check: an exact test of the win rate against the price (corrected for the number of cells), a profit after fees when markets on the same event are averaged together (they move together), and a profit in both halves of the period. Hover for details.</p>
+      <div class="tablewrap" style="padding:10px">${grid}</div>
+      ${ed.length ? `<h3 style="margin:14px 0 8px">Gaps that pass every check</h3>` + table([["Category"], ["Price a day out"], ["Markets", "n"], ["Separate events", "n"], ["YES won", "n"], ["Price said", "n"], ["Buy"], ["Return", "n"], ["Earlier half", "n"], ["Later half", "n"]],
+        ed.map((r) => { const y = r.side === "YES", st_ = y ? r.buy_yes : r.buy_no, hv = y ? r.halves_yes : r.halves_no;
+          return `<tr><td>${esc(r.cat)}</td><td>${r.lo}–${r.hi}¢</td><td class="n">${r.n}</td><td class="n">${r.events}</td><td class="n">${(r.won * 100).toFixed(0)}%</td><td class="n">${(r.implied * 100).toFixed(0)}%</td><td><b>${r.side}</b></td><td class="n pos">${pct(st_.roi)}</td><td class="n ${cls(hv[0])}">${pct(hv[0])}</td><td class="n ${cls(hv[1])}">${pct(hv[1])}</td></tr>`; }))
+        : `<p class="compare">No category-and-price gap passed every check (an exact test of win rate against price after correcting for the number of cells, a profit after fees averaged per event, and a profit in both halves of the period).</p>`}</div>`);
+  }
+
+  if (C) parts.push(`<div id="c"><h2>C. Dutch books: buying every outcome for less than it must pay</h2><p class="sub">On events Kalshi marks as mutually exclusive (no two outcomes can both win), buying one NO of every outcome pays at least $(n−1), so a total under that after fees is locked in. Buying one YES of every outcome is different: "exclusive" rules out two winners, not zero. "Who drops out of the NYC mayor's race first?" could end with nobody dropping out, so cheap YES baskets are listed separately and never called risk-free. Checked on ${fmt(C.event_days)} daily closing quotes across ${fmt(C.events)} events, every outcome included whatever its volume. Real fills depend on depth, which a closing quote doesn't show.</p>
+    <div class="tiles">${tile("Events checked", fmt(C.events))}${tile("Event-days", fmt(C.event_days))}${tile("Locked-in (buy every NO)", fmt(C.opportunities), C.opportunities ? "pos" : "")}${tile("Cheap YES baskets (not locked)", fmt(C.yes_days ?? 0))}${tile("…in events", fmt(C.yes_events ?? 0))}</div>
+    ${C.top.length ? table([["Event"], ["Day"], ["Outcomes", "n"], ["Cost", "n"], ["Locked-in edge", "n"]], C.top.map((r) => `<tr><td>${esc(r.event)}</td><td>${r.day}</td><td class="n">${r.outcomes}</td><td class="n">${r.cost}¢</td><td class="n pos">+${r.edge}¢</td></tr>`)) : `<p class="note">No locked-in Dutch book on any event-day: the NO side never summed below $(n−1) after fees. Kalshi's exclusive events are priced consistently.</p>`}
+    ${(C.yes_top || []).length ? `<p class="sub" style="margin-top:12px">Cheap YES baskets: these pay $1 only if one of the listed outcomes actually happens. The discount is the market's price for "none of them".</p>` + table([["Event"], ["Day"], ["Outcomes", "n"], ["Cost", "n"], ["Profit if one happens", "n"]], C.yes_top.map((r) => `<tr><td>${esc(r.event)}</td><td>${r.day}</td><td class="n">${r.outcomes}</td><td class="n">${r.cost}¢</td><td class="n">+${r.edge}¢</td></tr>`)) : ""}</div>`);
+
+  if (B) parts.push(`<div id="b"><h2>B. Kalshi odds as a stock signal</h2><p class="sub">SharkFin used VIX and GEX to decide when to hold the market. Here the regime signal is Kalshi's own odds: a recession index (the average of ${B.indexes["Recession odds"]} recession markets) and a Fed-cut index (${B.indexes["Fed-cut odds"]} markets). Decisions at the close, trades at the next open, cash earns nothing. Earlier period before ${esc(B.split)}.</p>
+    ${table([["Rule", "wrap"], ["Stock"], ["Sharpe, earlier", "n"], ["Hold", "n"], ["Sharpe, later", "n"], ["Hold", "n"], ["Return/yr, later", "n"], ["In market", "n"], ["Verdict"]],
+      B.rules.map((r) => `<tr><td class="wrap">${esc(r.rule)}</td><td>${r.stock}</td><td class="n">${r.pick.sharpe ?? "—"}</td><td class="n">${r.pick.hold_sharpe ?? "—"}</td><td class="n ${r.grade.sharpe > r.grade.hold_sharpe ? "pos" : ""}">${r.grade.sharpe ?? "—"}</td><td class="n">${r.grade.hold_sharpe ?? "—"}</td><td class="n">${pct(r.grade.ann)}</td><td class="n">${r.grade.in_market == null ? "—" : Math.round(r.grade.in_market * 100) + "%"}</td><td>${verdict(r.works)}</td></tr>`))}
+    <h3 style="margin:16px 0 8px">Buying fear: SPY over the next 3 months, by how recession odds moved in the 2 weeks before</h3>
+    ${table([["Recession odds over the prior 2 weeks"], ["Days", "n"], ["SPY next 3 months", "n"], ["Higher 3 months later", "n"]], B.fear_table.map((r) => `<tr><td>${esc(r.group)}</td><td class="n">${r.n}</td><td class="n ${cls(r.spy_3m)}">${pct(r.spy_3m)}</td><td class="n">${Math.round(r.up * 100)}%</td></tr>`))}
+    <p class="hint">The 3-month windows overlap, so the days in this table aren't independent: read it as a pattern, like SharkFin's "after VIX closed above 30" table, not as a tested strategy.</p></div>`);
+
+  if (D) parts.push(`<div id="d"><h2>D. SharkFin's indicators on in-game sports prices</h2><p class="sub">The same indicators SharkFin used on the Nasdaq, applied to a team's price during the game: one bet per game, filled at the next live ask and held to the result. Settings picked on the first 55% of ${fmt(D.games)} games by date, checked on the next 20% and tested once on the last 25%.</p>
+    ${table([["Strategy (best setting on the search games)", "wrap"], ["Search", "n"], ["Bets", "n"], ["Validation", "n"], ["Bets", "n"], ["Test", "n"], ["Bets", "n"], ["t (test)", "n"], ["Verdict"]],
+      D.families.map((f) => `<tr><td class="wrap"><b>${esc(f.family.replace("_", " "))}</b><br><span class="hint">${esc(f.rule)}</span></td>${st(f.train)}${st(f.valid)}${st(f.test)}<td class="n">${f.test.t}</td><td>${verdict(f.works, f.train.roi > 0 && f.valid.roi > 0 && f.test.roi > 0)}</td></tr>`))}
+    <p class="hint">“Lead only” means positive in all three periods but not strong enough in any one to rule out luck.</p></div>`);
+
+  $("out").innerHTML = `<div style="display:grid;gap:28px">${parts.join("")}</div>`;
+  $("built").textContent = `Built ${Z.built}.`;
+})();
+</script>

@@ -22,6 +22,7 @@ This project tests well-known sports "trends" against real Kalshi prediction-mar
 | [Markets vs stocks](https://adiamlani130.github.io/KalshiArbitrageBettor/app/stocks.html) | 336 Kalshi markets against 242 stocks and ETFs: who moves first, lag trades, hourly shocks, announcements, earnings calls |
 | [Strategies & hedging](https://adiamlani130.github.io/KalshiArbitrageBettor/app/strategies.html) | Kalshi vs options-implied odds, merger spreads, second-order baskets, hedging a stock with a contract |
 | [Strategy search](https://adiamlani130.github.io/KalshiArbitrageBettor/app/findings.html) | What survived when a genetic algorithm, NEAT neural networks, a gradient-boosted model and a grid search hunted for strategies, judged on games they never saw |
+| [Strategy zoo](https://adiamlani130.github.io/KalshiArbitrageBettor/app/zoo.html) | SharkFin's trading strategies and prediction-market strategies run on thousands of settled Kalshi markets, on stocks with Kalshi odds as the signal, and on in-game prices; plus a Dutch-book arbitrage scan and a map of where Kalshi's odds are off |
 
 ## Key results
 
@@ -89,6 +90,21 @@ Two searches hunted for betting strategies, and both judged every idea on games 
 - **Losing is repeatable.** Backing whoever is behind on price an hour into a game lost 12.9% in the search period and 16.1% on 5,936 held-back bets across all 14 leagues. Long shots are overpriced in every sport.
 - **Prediction markets and stocks move together, and neither leads.** Same-day links replicate; next-day leads in either direction do not.
 - **Two "edges" were leaks, and the tests caught them.** An earlier run showed tennis favorites bought an hour early earning 10–15% (the favorite was taken from the closing line), and a WTA rule that "held up" out of sample (+13.5% on 177 matches). The second came from tennis start times estimated with the whole match's trading volume. With both fixed and the tennis data re-pulled, both vanish. [docs/LEAKAGE.md](docs/LEAKAGE.md) has the full audit.
+
+## Strategy zoo: SharkFin's strategies and prediction-market ideas
+
+`analysis/zoo.py` takes the strategies tested for SharkFin (Dive Zone RSI(2) dips, IBS reversion, momentum, EMA crosses, Donchian and "new high after a fall" breakouts, Bollinger fades, MACD, buying fear) plus strategies built for prediction markets and runs them in four places. Settings are picked on an earlier period and graded once on a later one, with fills after every signal at the real ask or bid and Kalshi fees both ways.
+
+| Where | What was tried | Held up out of sample |
+|---|---|---|
+| 3,787 settled Kalshi markets outside sports (15 categories), traded as assets | 9 families (the SharkFin set, plus favorite-near-expiry and long-shot fades) | 0. Round-trip spreads and fees eat every swing trade; the best, momentum, made +0.7% on 1,153 later trades |
+| Kalshi odds as a stock signal (SPY, QQQ, IWM, TLT) | 18 rules on a recession-odds index and a Fed-cut-odds index | 1, weakly: hold SPY only while recession odds sit at or below their 10-day average (Sharpe 1.22 vs 1.03 for holding, in the market 55% of the time) |
+| In-game sports prices, 16,834 games | 8 indicator families, in-game | 0. Every one loses on the test games |
+| Dutch books on 189 mutually exclusive events (6,663 event-days) | Buy every NO for less than $(n−1) after fees | 0 locked-in. 54 "cheap YES basket" days exist, but each only pays if some listed outcome happens, so none is risk-free |
+
+**Where the odds are off.** One gap passes every check (an exact binomial test corrected for the number of cells, profit averaged per event, and profit in both halves of the period): **Mentions** markets ("will the CEO say X on the earnings call?") priced 70–80¢ a day out resolved YES only 49% of the time. Buying NO returned +98% across 33 separate events in 144 different series, with +107% in the earlier half and +94% in the later one. All Mentions cells from 30¢ to 80¢ lean the same way. Caveat: the sample takes the busiest markets per series by lifetime volume, which a trader couldn't know in advance, and 33 events is a small sample. Treat it as a lead to paper-trade, not a proven edge.
+
+**Fear and stocks (descriptive).** After the biggest 10-day rises in Kalshi recession odds, SPY rose 5.7% over the next 3 months (78% of the time) vs 2.3% after the biggest drops. Overlapping windows, so it isn't a backtest.
 
 ## What you can test
 
@@ -170,6 +186,8 @@ python scripts/pull_stocks.py     # Kalshi probabilities + Yahoo Finance prices 
 python scripts/pull_targets.py    # price-target markets + volatility indexes for the Strategies page
 python analysis/discover.py       # grid search with a held-back test (about 30 seconds)
 python analysis/evolve.py         # genetic algorithm, NEAT and gradient boosting (about 15 minutes)
+python scripts/pull_universe.py   # 3,787 settled non-sports Kalshi markets for the Strategy zoo (about 30 minutes)
+python analysis/zoo.py            # Strategy zoo (about 2 minutes)
 python scripts/build_home.py      # homepage data
 ```
 

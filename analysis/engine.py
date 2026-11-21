@@ -68,7 +68,7 @@ def load(league, idx=None):
         et = datetime.fromtimestamp(g("ts"), timezone.utc) - timedelta(hours=5)      # close enough to New York for a date
         games.append(dict(league=league, sport=meta["sport"], step=meta["step"], date=et.strftime("%Y-%m-%d"), ts=g("ts"),
                           names=[g("A"), g("B")], home=0 if g("home") else None, win=-1 if g("draw") else (0 if g("won") else 1),
-                          pre=pre, h1=pair("h1"), fav=0 if mid(pre[0]) >= mid(pre[1]) else 1, bid=[ab, bb], ask=[aa, ba], live=[la, lb], n=len(aa), pvol=g("pvol")))
+                          pre=pre, h1=pair("h1"), h24=pair("h24"), fav=0 if mid(pre[0]) >= mid(pre[1]) else 1, bid=[ab, bb], ask=[aa, ba], live=[la, lb], n=len(aa), pvol=g("pvol")))
     return games
 
 def mid_at(g, s, i):
