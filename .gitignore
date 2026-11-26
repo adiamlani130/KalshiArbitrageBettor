@@ -6,3 +6,5 @@ data/paper_state.json
 analysis/.neat.cfg
 data/universe_cache/
 data/pbp/
+data/forward_cache/
+__pycache__/

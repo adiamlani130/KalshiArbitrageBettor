@@ -52,27 +52,33 @@ def round_trip(price, sell):            # bought at `price`, sold early at `sell
     return c * q - STAKE - fee(p, c) - fee(q, c)
 
 # ================================================================ A. Kalshi contracts as an asset
+def market_from(m, rows):
+    """One settled market (an index record) plus its daily [ts, bid, ask, last] rows -> the zoo's market dict, or None.
+    Only two-sided quotes with a spread of 10c or less count as tradable."""
+    if len(rows) < 4: return None
+    sched = ts(m.get("expected_expiration_time")) or ts(m.get("latest_expiration_time")) or ts(m.get("expiration_time"))
+    close = ts(m["close_time"])
+    T, bid, ask, mid = [], [], [], []
+    last = None
+    for t, b, a, p in rows:
+        if t > close + 86400: break
+        live = b is not None and a is not None and 0 < a - b <= 10 and 1 <= a <= 99
+        m_ = (a + b) / 2 if live else (p if p is not None else last)
+        if m_ is None: continue
+        T.append(t); bid.append(b if live else None); ask.append(a if live else None); mid.append(m_); last = m_
+    if len(T) < 4: return None
+    return dict(id=m["ticker"], event=m.get("event_ticker") or m["ticker"], cat=m["cat"], series=m["series"], title=m.get("title") or "",
+                settle=100 if m["result"] == "yes" else 0, sched=sched, close=close, early=bool(m.get("can_close_early")),
+                T=T, bid=bid, ask=ask, mid=np.array(mid, float))
+
 def load_universe(index="index.json"):
     idx = json.load(open(os.path.join(UC, index)))
     out = []
     for m in idx:
         path = os.path.join(UC, "d_" + m["ticker"].replace("/", "~") + ".json")
         if not os.path.exists(path): continue
-        rows = json.load(open(path))
-        if len(rows) < 4: continue
-        sched = ts(m.get("expected_expiration_time")) or ts(m.get("latest_expiration_time")) or ts(m.get("expiration_time"))
-        close = ts(m["close_time"])
-        T, bid, ask, mid = [], [], [], []
-        last = None
-        for t, b, a, p in rows:
-            if t > close + 86400: break
-            live = b is not None and a is not None and 0 < a - b <= 10 and 1 <= a <= 99
-            m_ = (a + b) / 2 if live else (p if p is not None else last)
-            if m_ is None: continue
-            T.append(t); bid.append(b if live else None); ask.append(a if live else None); mid.append(m_); last = m_
-        if len(T) < 4: continue
-        out.append(dict(id=m["ticker"], event=m.get("event_ticker") or m["ticker"], cat=m["cat"], series=m["series"], title=m.get("title") or "", settle=100 if m["result"] == "yes" else 0,
-                        sched=sched, close=close, early=bool(m.get("can_close_early")), T=T, bid=bid, ask=ask, mid=np.array(mid, float)))
+        x = market_from(m, json.load(open(path)))
+        if x: out.append(x)
     return out
 
 def memo(m, key, fn):
@@ -262,18 +268,36 @@ def binom_p(k, n, p):
     pmf = [math.comb(n, i) * p ** i * (1 - p) ** (n - i) for i in range(n + 1)]
     return min(1.0, sum(x for x in pmf if x <= pmf[k] * (1 + 1e-9)))
 
+MON = {m: i for i, m in enumerate(("", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")) if m}
+def event_day(event):
+    """The event's date from its ticker (e.g. KXEARNINGSMENTIONMDT-26MAY29 -> 2026-05-29, 00:00 UTC), fixed when the
+    market is listed. Kalshi's expiration fields are often the LATEST possible end, weeks or months after the event,
+    and the close time is only known afterwards, so neither can say when 'a day before' is."""
+    import re
+    x = re.search(r"-(\d{2})([A-Z]{3})(\d{2})", event or "")
+    if not x or x.group(2) not in MON: return None
+    try: return int(datetime(2000 + int(x.group(1)), MON[x.group(2)], int(x.group(3)), tzinfo=timezone.utc).timestamp())
+    except ValueError: return None
+
+def day_before(m):
+    """Index of the day-end quote on the day before the event's date, if the market was trading then; else None."""
+    d = event_day(m["event"])
+    if d is None: return None
+    ks = [k for k, t in enumerate(m["T"]) if d - 86400 < t <= d and m["ask"][k] is not None]
+    return ks[-1] if ks else None
+
 def section_e(markets):
-    """Each market's price a day before its scheduled end (and before it actually closed) against the result.
+    """Each market's price at the end of the day before its event's date (from the ticker; markets without a dated
+    ticker are left out) against the result.
     An 'edge' must (1) pass an exact binomial test of win rate vs price, after a false-discovery correction across
     cells, (2) make money after fees when averaged per event (markets on the same event move together), and
     (3) make money in both halves of the period."""
     allt = sorted(m["T"][0] for m in markets); half = allt[len(allt) // 2]
     cells = {}
     for m in markets:
-        if not m["sched"]: continue
-        ks = [k for k, t in enumerate(m["T"]) if t <= m["sched"] - 86400 and t <= m["close"] - 3600 and m["ask"][k] is not None]
-        if not ks: continue
-        k = ks[-1]; p = m["mid"][k]
+        k = day_before(m)
+        if k is None: continue
+        p = m["mid"][k]
         b = int(min(99, p) // 10) * 10
         for cat in (m["cat"], "All non-sports"):
             c = cells.setdefault((cat, b), dict(n=0, yes=0, imp=0.0, ev={}))

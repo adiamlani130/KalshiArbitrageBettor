@@ -1,0 +1,77 @@
+{
+ "breakthroughs": [],
+ "hypotheses": 5,
+ "rows": [
+  {
+   "bets": 0,
+   "domain": "games",
+   "id": "late_favorite_85_95",
+   "n": 0,
+   "p": 1.0,
+   "reason": null,
+   "registered": "2026-11-26",
+   "roi": 0.0,
+   "status": "live",
+   "t": 0.0,
+   "title": "Late in any game, buy the team priced 85-95c",
+   "verdict": "too early"
+  },
+  {
+   "bets": 0,
+   "domain": "markets",
+   "id": "mentions_no_40_60",
+   "n": 0,
+   "p": 1.0,
+   "reason": null,
+   "registered": "2026-11-26",
+   "roi": 0.0,
+   "status": "live",
+   "t": 0.0,
+   "title": "Mentions: buy NO at 40-60c the day before the event",
+   "verdict": "too early"
+  },
+  {
+   "bets": 0,
+   "domain": "games",
+   "id": "nba_q4_price_60_80",
+   "n": 0,
+   "p": 1.0,
+   "reason": null,
+   "registered": "2026-11-26",
+   "roi": 0.0,
+   "status": "live",
+   "t": 0.0,
+   "title": "NBA 4th quarter: buy the team priced 60-80c",
+   "verdict": "too early"
+  },
+  {
+   "bets": 0,
+   "domain": "markets",
+   "id": "nonsports_no_60_70",
+   "n": 0,
+   "p": 1.0,
+   "reason": null,
+   "registered": "2026-11-26",
+   "roi": 0.0,
+   "status": "live",
+   "t": 0.0,
+   "title": "Outside sports: buy NO at 60-70c the day before the event",
+   "verdict": "too early"
+  },
+  {
+   "bets": 0,
+   "domain": "games",
+   "id": "pregame_favorite_70_90",
+   "n": 0,
+   "p": 1.0,
+   "reason": null,
+   "registered": "2026-11-26",
+   "roi": 0.0,
+   "status": "live",
+   "t": 0.0,
+   "title": "Before the start, buy the favorite priced 70-90c",
+   "verdict": "too early"
+  }
+ ],
+ "updated": "2026-11-26 06:36 UTC"
+}

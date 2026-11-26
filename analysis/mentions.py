@@ -6,8 +6,9 @@ This test was written BEFORE looking at the new data, and its rules are fixed he
 
   Markets   a random sample of all settled Mentions markets (scripts/pull_mentions.py), minus every event the zoo
             already saw. No market is chosen by volume or outcome.
-  Entry     the last live two-sided quote (spread <= 10c) at least a day before the scheduled end and an hour before
-            the market actually closed; buy NO at 100 - bid, hold to settlement, Kalshi's fee paid.
+  Entry     the live two-sided quote (spread <= 10c) at the end of the day before the event's date, taken from the
+            ticker; buy NO at 100 - bid, hold to settlement, Kalshi's fee paid. (First run used 'the last quote a day
+            before the scheduled end and before the close', which leaks: see docs/LEAKAGE.md #12.)
   Primary   price 70-80c. Passes if the return, averaged per event (words on one call move together), is positive
             with t >= 2. Secondary rows (other bands, kinds of event, halves of time) are reported, not cherry-picked.
 
@@ -26,9 +27,7 @@ def kind(m):
     return "Other"
 
 def entry(m):
-    if not m["sched"]: return None
-    ks = [k for k, t in enumerate(m["T"]) if t <= m["sched"] - 86400 and t <= m["close"] - 3600 and m["ask"][k] is not None]
-    return ks[-1] if ks else None
+    return Z.day_before(m)
 
 def row(name, picks):
     ev = {}

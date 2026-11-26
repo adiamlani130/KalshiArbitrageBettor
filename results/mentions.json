@@ -1,254 +1,254 @@
 {
  "primary": {
   "test": "70-80c (the zoo's finding)",
-  "markets": 415,
-  "events": 362,
-  "yes_won": 0.786,
+  "markets": 307,
+  "events": 264,
+  "yes_won": 0.743,
   "price_said": 0.749,
   "buy_no": {
-   "n": 362,
-   "roi": -0.2897,
-   "t": -3.86,
-   "p": 0.9999
+   "n": 264,
+   "roi": -0.152,
+   "t": -1.65,
+   "p": 0.9503
   }
  },
  "bands": [
   {
    "test": "0-10c",
-   "markets": 1064,
-   "events": 571,
-   "yes_won": 0.024,
-   "price_said": 0.029,
+   "markets": 435,
+   "events": 295,
+   "yes_won": 0.023,
+   "price_said": 0.046,
    "buy_no": {
-    "n": 571,
-    "roi": -0.0066,
-    "t": -1.19,
-    "p": 0.8836
+    "n": 295,
+    "roi": 0.0059,
+    "t": 0.7,
+    "p": 0.2422
    }
   },
   {
    "test": "10-20c",
-   "markets": 438,
-   "events": 341,
-   "yes_won": 0.123,
-   "price_said": 0.146,
+   "markets": 364,
+   "events": 292,
+   "yes_won": 0.091,
+   "price_said": 0.148,
    "buy_no": {
-    "n": 341,
-    "roi": -0.0248,
-    "t": -1.18,
-    "p": 0.882
+    "n": 292,
+    "roi": 0.0326,
+    "t": 1.78,
+    "p": 0.0378
    }
   },
   {
    "test": "20-30c",
-   "markets": 423,
-   "events": 340,
-   "yes_won": 0.27,
-   "price_said": 0.245,
+   "markets": 321,
+   "events": 264,
+   "yes_won": 0.212,
+   "price_said": 0.244,
    "buy_no": {
-    "n": 340,
-    "roi": -0.097,
-    "t": -3.15,
-    "p": 0.9992
+    "n": 264,
+    "roi": -0.0119,
+    "t": -0.38,
+    "p": 0.6466
    }
   },
   {
    "test": "30-40c",
-   "markets": 367,
-   "events": 321,
-   "yes_won": 0.373,
-   "price_said": 0.348,
+   "markets": 300,
+   "events": 256,
+   "yes_won": 0.33,
+   "price_said": 0.347,
    "buy_no": {
-    "n": 321,
-    "roi": -0.0775,
-    "t": -2.0,
-    "p": 0.977
+    "n": 256,
+    "roi": -0.0251,
+    "t": -0.59,
+    "p": 0.7241
    }
   },
   {
    "test": "40-50c",
-   "markets": 262,
-   "events": 238,
-   "yes_won": 0.458,
-   "price_said": 0.444,
+   "markets": 182,
+   "events": 164,
+   "yes_won": 0.368,
+   "price_said": 0.445,
    "buy_no": {
-    "n": 238,
-    "roi": -0.0885,
-    "t": -1.6,
-    "p": 0.9452
+    "n": 164,
+    "roi": 0.0662,
+    "t": 1.04,
+    "p": 0.1486
    }
   },
   {
    "test": "50-60c",
-   "markets": 340,
-   "events": 292,
-   "yes_won": 0.574,
+   "markets": 248,
+   "events": 216,
+   "yes_won": 0.468,
    "price_said": 0.549,
    "buy_no": {
-    "n": 292,
-    "roi": -0.1491,
-    "t": -2.49,
-    "p": 0.9937
+    "n": 216,
+    "roi": 0.1177,
+    "t": 1.7,
+    "p": 0.0449
    }
   },
   {
    "test": "60-70c",
-   "markets": 370,
-   "events": 312,
-   "yes_won": 0.711,
-   "price_said": 0.646,
+   "markets": 297,
+   "events": 248,
+   "yes_won": 0.609,
+   "price_said": 0.645,
    "buy_no": {
-    "n": 312,
-    "roi": -0.2399,
-    "t": -3.5,
-    "p": 0.9998
+    "n": 248,
+    "roi": 0.0101,
+    "t": 0.13,
+    "p": 0.4495
    }
   },
   {
    "test": "70-80c",
-   "markets": 415,
-   "events": 362,
-   "yes_won": 0.786,
+   "markets": 307,
+   "events": 264,
+   "yes_won": 0.743,
    "price_said": 0.749,
    "buy_no": {
-    "n": 362,
-    "roi": -0.2897,
-    "t": -3.86,
-    "p": 0.9999
+    "n": 264,
+    "roi": -0.152,
+    "t": -1.65,
+    "p": 0.9503
    }
   },
   {
    "test": "80-90c",
-   "markets": 489,
-   "events": 405,
-   "yes_won": 0.881,
-   "price_said": 0.852,
+   "markets": 389,
+   "events": 318,
+   "yes_won": 0.841,
+   "price_said": 0.848,
    "buy_no": {
-    "n": 405,
-    "roi": -0.3458,
-    "t": -3.69,
-    "p": 0.9999
+    "n": 318,
+    "roi": -0.09,
+    "t": -0.75,
+    "p": 0.774
    }
   },
   {
    "test": "90-100c",
-   "markets": 567,
-   "events": 438,
-   "yes_won": 0.972,
-   "price_said": 0.942,
+   "markets": 350,
+   "events": 292,
+   "yes_won": 0.949,
+   "price_said": 0.938,
    "buy_no": {
-    "n": 438,
-    "roi": -0.7945,
-    "t": -10.23,
+    "n": 292,
+    "roi": -0.5366,
+    "t": -4.08,
     "p": 1.0
    }
   }
  ],
  "wide": {
   "test": "30-80c",
-  "markets": 1754,
-  "events": 964,
-  "yes_won": 0.594,
-  "price_said": 0.559,
+  "markets": 1334,
+  "events": 727,
+  "yes_won": 0.518,
+  "price_said": 0.557,
   "buy_no": {
-   "n": 964,
-   "roi": -0.2214,
-   "t": -7.32,
-   "p": 1.0
+   "n": 727,
+   "roi": -0.0064,
+   "t": -0.17,
+   "p": 0.5689
   }
  },
  "kinds": [
   {
    "test": "70-80c, Earnings calls",
-   "markets": 107,
-   "events": 96,
-   "yes_won": 0.729,
-   "price_said": 0.755,
+   "markets": 74,
+   "events": 68,
+   "yes_won": 0.689,
+   "price_said": 0.748,
    "buy_no": {
-    "n": 96,
-    "roi": -0.0086,
-    "t": -0.05,
-    "p": 0.5202
+    "n": 68,
+    "roi": 0.0104,
+    "t": 0.05,
+    "p": 0.4789
    }
   },
   {
    "test": "70-80c, Fed and central banks",
-   "markets": 10,
-   "events": 9,
-   "yes_won": 0.5,
-   "price_said": 0.743,
+   "markets": 4,
+   "events": 3,
+   "yes_won": 0.25,
+   "price_said": 0.74,
    "buy_no": {
-    "n": 9,
-    "roi": 0.5947,
-    "t": 0.91,
-    "p": 0.1811
+    "n": 3,
+    "roi": 1.2721,
+    "t": 1.1,
+    "p": 0.1367
    }
   },
   {
    "test": "70-80c, Sports broadcasts",
-   "markets": 152,
-   "events": 129,
-   "yes_won": 0.796,
-   "price_said": 0.747,
+   "markets": 130,
+   "events": 114,
+   "yes_won": 0.792,
+   "price_said": 0.75,
    "buy_no": {
-    "n": 129,
-    "roi": -0.312,
-    "t": -2.56,
-    "p": 0.9947
+    "n": 114,
+    "roi": -0.3038,
+    "t": -2.26,
+    "p": 0.9882
    }
   },
   {
    "test": "70-80c, Politicians and press briefings",
-   "markets": 84,
-   "events": 71,
-   "yes_won": 0.869,
-   "price_said": 0.749,
+   "markets": 51,
+   "events": 42,
+   "yes_won": 0.745,
+   "price_said": 0.747,
    "buy_no": {
-    "n": 71,
-    "roi": -0.6637,
-    "t": -5.49,
-    "p": 1.0
+    "n": 42,
+    "roi": -0.0817,
+    "t": -0.34,
+    "p": 0.6344
    }
   },
   {
    "test": "70-80c, Other",
-   "markets": 62,
-   "events": 57,
-   "yes_won": 0.79,
-   "price_said": 0.747,
+   "markets": 48,
+   "events": 37,
+   "yes_won": 0.729,
+   "price_said": 0.748,
    "buy_no": {
-    "n": 57,
-    "roi": -0.3865,
-    "t": -2.18,
-    "p": 0.9853
+    "n": 37,
+    "roi": -0.1781,
+    "t": -0.79,
+    "p": 0.7863
    }
   }
  ],
  "halves": [
   {
    "test": "70-80c, earlier half",
-   "markets": 210,
-   "events": 175,
-   "yes_won": 0.776,
-   "price_said": 0.749,
+   "markets": 142,
+   "events": 127,
+   "yes_won": 0.754,
+   "price_said": 0.751,
    "buy_no": {
-    "n": 175,
-    "roi": -0.307,
-    "t": -2.96,
-    "p": 0.9985
+    "n": 127,
+    "roi": -0.2211,
+    "t": -1.67,
+    "p": 0.9522
    }
   },
   {
    "test": "70-80c, later half",
-   "markets": 205,
-   "events": 187,
-   "yes_won": 0.795,
-   "price_said": 0.749,
+   "markets": 165,
+   "events": 137,
+   "yes_won": 0.733,
+   "price_said": 0.746,
    "buy_no": {
-    "n": 187,
-    "roi": -0.2736,
-    "t": -2.52,
-    "p": 0.9942
+    "n": 137,
+    "roi": -0.0879,
+    "t": -0.68,
+    "p": 0.7529
    }
   }
  ],
