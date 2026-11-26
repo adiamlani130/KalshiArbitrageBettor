@@ -1,0 +1,256 @@
+{
+ "primary": {
+  "test": "70-80c (the zoo's finding)",
+  "markets": 307,
+  "events": 264,
+  "yes_won": 0.743,
+  "price_said": 0.749,
+  "buy_no": {
+   "n": 264,
+   "roi": -0.152,
+   "t": -1.65,
+   "p": 0.9503
+  }
+ },
+ "bands": [
+  {
+   "test": "0-10c",
+   "markets": 435,
+   "events": 295,
+   "yes_won": 0.023,
+   "price_said": 0.046,
+   "buy_no": {
+    "n": 295,
+    "roi": 0.0059,
+    "t": 0.7,
+    "p": 0.2422
+   }
+  },
+  {
+   "test": "10-20c",
+   "markets": 364,
+   "events": 292,
+   "yes_won": 0.091,
+   "price_said": 0.148,
+   "buy_no": {
+    "n": 292,
+    "roi": 0.0326,
+    "t": 1.78,
+    "p": 0.0378
+   }
+  },
+  {
+   "test": "20-30c",
+   "markets": 321,
+   "events": 264,
+   "yes_won": 0.212,
+   "price_said": 0.244,
+   "buy_no": {
+    "n": 264,
+    "roi": -0.0119,
+    "t": -0.38,
+    "p": 0.6466
+   }
+  },
+  {
+   "test": "30-40c",
+   "markets": 300,
+   "events": 256,
+   "yes_won": 0.33,
+   "price_said": 0.347,
+   "buy_no": {
+    "n": 256,
+    "roi": -0.0251,
+    "t": -0.59,
+    "p": 0.7241
+   }
+  },
+  {
+   "test": "40-50c",
+   "markets": 182,
+   "events": 164,
+   "yes_won": 0.368,
+   "price_said": 0.445,
+   "buy_no": {
+    "n": 164,
+    "roi": 0.0662,
+    "t": 1.04,
+    "p": 0.1486
+   }
+  },
+  {
+   "test": "50-60c",
+   "markets": 248,
+   "events": 216,
+   "yes_won": 0.468,
+   "price_said": 0.549,
+   "buy_no": {
+    "n": 216,
+    "roi": 0.1177,
+    "t": 1.7,
+    "p": 0.0449
+   }
+  },
+  {
+   "test": "60-70c",
+   "markets": 297,
+   "events": 248,
+   "yes_won": 0.609,
+   "price_said": 0.645,
+   "buy_no": {
+    "n": 248,
+    "roi": 0.0101,
+    "t": 0.13,
+    "p": 0.4495
+   }
+  },
+  {
+   "test": "70-80c",
+   "markets": 307,
+   "events": 264,
+   "yes_won": 0.743,
+   "price_said": 0.749,
+   "buy_no": {
+    "n": 264,
+    "roi": -0.152,
+    "t": -1.65,
+    "p": 0.9503
+   }
+  },
+  {
+   "test": "80-90c",
+   "markets": 389,
+   "events": 318,
+   "yes_won": 0.841,
+   "price_said": 0.848,
+   "buy_no": {
+    "n": 318,
+    "roi": -0.09,
+    "t": -0.75,
+    "p": 0.774
+   }
+  },
+  {
+   "test": "90-100c",
+   "markets": 350,
+   "events": 292,
+   "yes_won": 0.949,
+   "price_said": 0.938,
+   "buy_no": {
+    "n": 292,
+    "roi": -0.5366,
+    "t": -4.08,
+    "p": 1.0
+   }
+  }
+ ],
+ "wide": {
+  "test": "30-80c",
+  "markets": 1334,
+  "events": 727,
+  "yes_won": 0.518,
+  "price_said": 0.557,
+  "buy_no": {
+   "n": 727,
+   "roi": -0.0064,
+   "t": -0.17,
+   "p": 0.5689
+  }
+ },
+ "kinds": [
+  {
+   "test": "70-80c, Earnings calls",
+   "markets": 74,
+   "events": 68,
+   "yes_won": 0.689,
+   "price_said": 0.748,
+   "buy_no": {
+    "n": 68,
+    "roi": 0.0104,
+    "t": 0.05,
+    "p": 0.4789
+   }
+  },
+  {
+   "test": "70-80c, Fed and central banks",
+   "markets": 4,
+   "events": 3,
+   "yes_won": 0.25,
+   "price_said": 0.74,
+   "buy_no": {
+    "n": 3,
+    "roi": 1.2721,
+    "t": 1.1,
+    "p": 0.1367
+   }
+  },
+  {
+   "test": "70-80c, Sports broadcasts",
+   "markets": 130,
+   "events": 114,
+   "yes_won": 0.792,
+   "price_said": 0.75,
+   "buy_no": {
+    "n": 114,
+    "roi": -0.3038,
+    "t": -2.26,
+    "p": 0.9882
+   }
+  },
+  {
+   "test": "70-80c, Politicians and press briefings",
+   "markets": 51,
+   "events": 42,
+   "yes_won": 0.745,
+   "price_said": 0.747,
+   "buy_no": {
+    "n": 42,
+    "roi": -0.0817,
+    "t": -0.34,
+    "p": 0.6344
+   }
+  },
+  {
+   "test": "70-80c, Other",
+   "markets": 48,
+   "events": 37,
+   "yes_won": 0.729,
+   "price_said": 0.748,
+   "buy_no": {
+    "n": 37,
+    "roi": -0.1781,
+    "t": -0.79,
+    "p": 0.7863
+   }
+  }
+ ],
+ "halves": [
+  {
+   "test": "70-80c, earlier half",
+   "markets": 142,
+   "events": 127,
+   "yes_won": 0.754,
+   "price_said": 0.751,
+   "buy_no": {
+    "n": 127,
+    "roi": -0.2211,
+    "t": -1.67,
+    "p": 0.9522
+   }
+  },
+  {
+   "test": "70-80c, later half",
+   "markets": 165,
+   "events": 137,
+   "yes_won": 0.733,
+   "price_said": 0.746,
+   "buy_no": {
+    "n": 137,
+    "roi": -0.0879,
+    "t": -0.68,
+    "p": 0.7529
+   }
+  }
+ ],
+ "replicates": false
+}

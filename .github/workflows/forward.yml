@@ -1,0 +1,33 @@
+name: forward-test
+# Daily forward test of the ideas in forward/hypotheses/ (see forward/run.py). No AI runs here.
+on:
+  schedule:
+    - cron: "17 11 * * *"        # 11:17 UTC daily, after the night's games have settled
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: forward-test
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }      # hypothesis code runs without the push token
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install numpy requests
+      - name: Forward test
+        run: cd forward && python run.py
+      - name: Commit the results
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "forward-test"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add forward/ledger.json forward/state.json forward/bets forward/results.json forward/REPORT.md
+          git diff --cached --quiet && exit 0
+          git commit -q -m "Forward test $(date -u +%F)"
+          url="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          for i in 1 2 3; do git pull -q --rebase "$url" "$GITHUB_REF_NAME" && git push -q "$url" "HEAD:$GITHUB_REF_NAME" && exit 0; sleep 10; done
+          exit 1

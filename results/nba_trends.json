@@ -1,0 +1,276 @@
+{
+ "games": {
+  "2026": 1306,
+  "2027": 186
+ },
+ "rules_tried": 2310,
+ "picked": 16,
+ "luck_expected": 52.7,
+ "works": 0,
+ "picked_positive_on_test": 3,
+ "picked_tested": 8,
+ "test_mean_roi_of_picked": -0.051,
+ "forecast": {
+  "price only": 0.4785,
+  "price + every stat": 0.488,
+  "moments": 2123
+ },
+ "picked_rules": [
+  {
+   "rule": "leading 10-20, 3rd quarter, behind on ft_pct and fta: buy it",
+   "train": {
+    "n": 56,
+    "roi": 0.1889,
+    "t": 2.965,
+    "p": 0.0015
+   },
+   "test": {
+    "n": 6,
+    "roi": 0.1154,
+    "t": 5.9476,
+    "p": 0.0
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 10-20, 3rd quarter, behind on reb and foul_margin: buy it",
+   "train": {
+    "n": 56,
+    "roi": 0.1266,
+    "t": 2.2483,
+    "p": 0.0123
+   },
+   "test": {
+    "n": 7,
+    "roi": 0.2242,
+    "t": 2.4824,
+    "p": 0.0065
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 10-20, 1st half, ahead on tov_margin and reb: buy it",
+   "train": {
+    "n": 140,
+    "roi": 0.0811,
+    "t": 2.4669,
+    "p": 0.0068
+   },
+   "test": {
+    "n": 18,
+    "roi": 0.1091,
+    "t": 1.0089,
+    "p": 0.1565
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 4-9, 1st half, far behind on fta: buy it",
+   "train": {
+    "n": 124,
+    "roi": 0.1734,
+    "t": 2.0706,
+    "p": 0.0192
+   },
+   "test": {
+    "n": 19,
+    "roi": 0.0961,
+    "t": 0.5554,
+    "p": 0.2893
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 4-9, 1st half, behind on efg and three_pct: buy it",
+   "train": {
+    "n": 80,
+    "roi": 0.1808,
+    "t": 2.0743,
+    "p": 0.019
+   },
+   "test": {
+    "n": 9,
+    "roi": 0.1067,
+    "t": 0.4803,
+    "p": 0.3155
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 10-20, 1st half, ahead on oreb and reb: buy it",
+   "train": {
+    "n": 327,
+    "roi": 0.0864,
+    "t": 2.2427,
+    "p": 0.0125
+   },
+   "test": {
+    "n": 46,
+    "roi": 0.0158,
+    "t": 0.1908,
+    "p": 0.4244
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 10-20, 3rd quarter, behind on ft_pct and oreb: buy it",
+   "train": {
+    "n": 42,
+    "roi": 0.1996,
+    "t": 4.3965,
+    "p": 0.0
+   },
+   "test": {
+    "n": 7,
+    "roi": 0.0281,
+    "t": 0.1458,
+    "p": 0.442
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 10-20, 1st half, ahead on fta and oreb: buy it",
+   "train": {
+    "n": 173,
+    "roi": 0.1046,
+    "t": 2.3756,
+    "p": 0.0088
+   },
+   "test": {
+    "n": 21,
+    "roi": -0.0058,
+    "t": -0.0474,
+    "p": 0.5189
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 4-9, 4th quarter, behind on ft_pct and fta: buy it",
+   "train": {
+    "n": 55,
+    "roi": 0.1687,
+    "t": 2.1904,
+    "p": 0.0142
+   },
+   "test": {
+    "n": 10,
+    "roi": -0.0094,
+    "t": -0.0537,
+    "p": 0.5214
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 4-9, 3rd quarter, far behind on threes_made: buy it",
+   "train": {
+    "n": 99,
+    "roi": 0.1326,
+    "t": 2.179,
+    "p": 0.0147
+   },
+   "test": {
+    "n": 12,
+    "roi": -0.1351,
+    "t": -0.6845,
+    "p": 0.7532
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 10-20, 1st half, clearly behind on poss: buy it",
+   "train": {
+    "n": 283,
+    "roi": 0.0751,
+    "t": 2.1914,
+    "p": 0.0142
+   },
+   "test": {
+    "n": 43,
+    "roi": -0.0767,
+    "t": -0.7616,
+    "p": 0.7768
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 10-20, 1st half, ahead on reb and foul_margin: buy it",
+   "train": {
+    "n": 219,
+    "roi": 0.1023,
+    "t": 2.6506,
+    "p": 0.004
+   },
+   "test": {
+    "n": 35,
+    "roi": -0.066,
+    "t": -0.7759,
+    "p": 0.7811
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 4-9, 3rd quarter, behind on three_pct and threes_made: buy it",
+   "train": {
+    "n": 82,
+    "roi": 0.1262,
+    "t": 2.2031,
+    "p": 0.0138
+   },
+   "test": {
+    "n": 9,
+    "roi": -0.2278,
+    "t": -1.1538,
+    "p": 0.8757
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 10-20, 1st half, behind on oreb and poss: buy it",
+   "train": {
+    "n": 51,
+    "roi": 0.1813,
+    "t": 2.464,
+    "p": 0.0069
+   },
+   "test": {
+    "n": 9,
+    "roi": -0.3228,
+    "t": -1.4352,
+    "p": 0.9244
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 10-20, 1st half, ahead on fta and reb: buy it",
+   "train": {
+    "n": 255,
+    "roi": 0.0997,
+    "t": 2.9531,
+    "p": 0.0016
+   },
+   "test": {
+    "n": 30,
+    "roi": -0.1858,
+    "t": -1.7656,
+    "p": 0.9613
+   },
+   "works": false
+  },
+  {
+   "rule": "leading 10-20, 1st half, behind on shots and poss: buy it",
+   "train": {
+    "n": 96,
+    "roi": 0.1137,
+    "t": 2.1226,
+    "p": 0.0169
+   },
+   "test": {
+    "n": 17,
+    "roi": -0.2946,
+    "t": -1.8594,
+    "p": 0.9685
+   },
+   "works": false
+  }
+ ]
+}

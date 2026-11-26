@@ -1,0 +1,37 @@
+{
+ "late_favorite_85_95": {
+  "domain": "games",
+  "registered": 1795673053,
+  "sha256": "463696033698828ff0ec3d3eaf954e62d2767c090d32cb13b31972178b0caaba",
+  "status": "live",
+  "title": "Late in any game, buy the team priced 85-95c"
+ },
+ "mentions_no_40_60": {
+  "domain": "markets",
+  "registered": 1795673053,
+  "sha256": "4afb0318c7beb547bba1d3e769728757a4fedfe6bbd05ddb4f81a727d94e244d",
+  "status": "live",
+  "title": "Mentions: buy NO at 40-60c the day before the event"
+ },
+ "nba_q4_price_60_80": {
+  "domain": "games",
+  "registered": 1795673053,
+  "sha256": "0ffbed1f12c0d850a577a837dc48f6c102707b04e9c8565a71a2f04f534021ff",
+  "status": "live",
+  "title": "NBA 4th quarter: buy the team priced 60-80c"
+ },
+ "nonsports_no_60_70": {
+  "domain": "markets",
+  "registered": 1795673053,
+  "sha256": "1f4c3e1e93f080042c5ace2cb72f922fdeb21b43d7261fedff258044d3e8db7e",
+  "status": "live",
+  "title": "Outside sports: buy NO at 60-70c the day before the event"
+ },
+ "pregame_favorite_70_90": {
+  "domain": "games",
+  "registered": 1795673053,
+  "sha256": "5e49ce0352f1bed1075b4681877b73bdf7c1d917bca637975c08534db3f6d51b",
+  "status": "live",
+  "title": "Before the start, buy the favorite priced 70-90c"
+ }
+}
