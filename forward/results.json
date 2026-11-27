@@ -3,16 +3,16 @@
  "hypotheses": 5,
  "rows": [
   {
-   "bets": 0,
+   "bets": 27,
    "domain": "games",
    "id": "late_favorite_85_95",
-   "n": 0,
-   "p": 1.0,
+   "n": 27,
+   "p": 0.8561,
    "reason": null,
    "registered": "2026-11-26",
-   "roi": 0.0,
+   "roi": -0.093,
    "status": "live",
-   "t": 0.0,
+   "t": -1.06,
    "title": "Late in any game, buy the team priced 85-95c",
    "verdict": "too early"
   },
@@ -59,19 +59,19 @@
    "verdict": "too early"
   },
   {
-   "bets": 0,
+   "bets": 9,
    "domain": "games",
    "id": "pregame_favorite_70_90",
-   "n": 0,
-   "p": 1.0,
+   "n": 9,
+   "p": 0.7623,
    "reason": null,
    "registered": "2026-11-26",
-   "roi": 0.0,
+   "roi": -0.1541,
    "status": "live",
-   "t": 0.0,
+   "t": -0.71,
    "title": "Before the start, buy the favorite priced 70-90c",
    "verdict": "too early"
   }
  ],
- "updated": "2026-11-26 06:36 UTC"
+ "updated": "2026-11-27 20:53 UTC"
 }
